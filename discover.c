@@ -9,10 +9,10 @@ static void neighbor_print(void)
 {
     int i;
 
-    TRACE("N(x) = { ");
+    TRACE_APP("N(x) = { ");
     for (i = 0; i < mydata->nneighbors; i++)
-        TRACE2("P%03u ", mydata->neighbors[i]);
-    TRACE2("}\n");
+        TRACE2_APP("P%03u ", mydata->neighbors[i]);
+    TRACE2_APP("}\n");
 }
 
 static void neighbor_add(addr_t addr)
@@ -40,7 +40,7 @@ void discover_loop(void)
 
     if (kilo_ticks >= mydisc->start + DISCOVERY_TIME) {
         mydisc->state = DISCOVER_STATE_DONE;
-        APP_COLOR(GREEN);
+        COLOR_APP(GREEN);
         return;
     }
 
@@ -48,14 +48,14 @@ void discover_loop(void)
         /* some rand to try to avoid collisions */
         if (kilo_ticks > mydisc->next) {
             mydisc->state = DISCOVER_STATE_ACTIVE;
-            APP_COLOR(RED);
+            COLOR_APP(RED);
             chan_send(BROADCAST_ADDR, NULL, 0);
             mydisc->next = kilo_ticks + DISCOVERY_RAND_OFF;
             neighbor_print();
         }
     } else {
         mydisc->state = DISCOVER_STATE_IDLE;
-        APP_COLOR(WHITE);
+        COLOR_APP(WHITE);
     }
 
     if (chan_recv(&src, NULL, NULL) >= 0)
@@ -67,5 +67,5 @@ void discover_init(void)
     memset(mydisc, 0, sizeof(*mydisc));
     mydisc->start = kilo_ticks;
     mydisc->state = DISCOVER_STATE_IDLE;
-    APP_COLOR(WHITE);
+    COLOR_APP(WHITE);
 }

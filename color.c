@@ -13,7 +13,7 @@ static void active(uint8_t color)
         mycol->state = COLOR_STATE_DONE;
         if (mydata->neighbors[0] == BROADCAST_ADDR) {
             mydata->nodes = color + 1;
-            TRACE("FOUND %u participants\n", mydata->nodes);
+            TRACE_APP("FOUND %u participants\n", mydata->nodes);
             return;
         }
         dst = mydata->neighbors[0]; /* parent is the first neighbor */
@@ -30,7 +30,7 @@ static void idle(uint8_t color)
 {
     mycol->state = COLOR_STATE_ACTIVE;
     mydata->color = color;
-    APP_COLOR(color);
+    COLOR_APP(color);
     mycol->idx++; /* Position to the first children */
 }
 

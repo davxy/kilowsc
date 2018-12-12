@@ -18,7 +18,7 @@ static void loop(void)
                 spt_init();
             } else {
                 mydata->proto = 0xFF;
-                APP_COLOR(WHITE);
+                COLOR_APP(WHITE);
             }
         }
         break;
@@ -28,7 +28,7 @@ static void loop(void)
                 mydata->spt.notify_num == 0 &&
                 buf_size(&mydata->chan.tx_buf) == 0) {
             mydata->proto = APP_PROTO_COL;
-            APP_COLOR(WHITE);
+            COLOR_APP(WHITE);
             mydata->neighbors[0] = mydata->spt.parent;
             memcpy(mydata->neighbors + 1, mydata->spt.childs,
                     mydata->spt.nchilds * sizeof(mydata->neighbors[0]));

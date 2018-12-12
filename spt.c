@@ -112,17 +112,17 @@ static void child_add(addr_t id)
 
 static void term_res(void)
 {
-	TRACE("TERM RES\n");
+	TRACE_APP("TERM RES\n");
 }
 
 static void term(void)
 {
     struct spt_pdu pdu;
 
-    TRACE("TERM\n");
+    TRACE_APP("TERM\n");
     if (myspt->root == kilo_uid) {
-        TRACE("ROOT FOUND send term to (%u) childs\n", myspt->nchilds);
-        set_color(RGB(0,0,3)); /* blue root */
+        TRACE_APP("ROOT FOUND send term to (%u) childs\n", myspt->nchilds);
+        COLOR_APP(BLUE); /* blue root */
         myspt->state = SPT_STATE_DONE;
         ASSERT(myspt->notify_num == 0);
         myspt->notify_num = myspt->nchilds;
@@ -132,11 +132,11 @@ static void term(void)
         pdu.type = PDU_TYPE_CHECK;
         /* Check departs from leafs */
         ASSERT(myspt->parent != BROADCAST_ADDR);
-        TRACE("TX CHECK <dst=%u ,root=%u>\n", myspt->parent, myspt->root);
+        TRACE_APP("TX CHECK <dst=%u ,root=%u>\n", myspt->parent, myspt->root);
         if (pdu_send(&pdu, myspt->parent) < 0) {
             ASSERT(0);
         }
-        set_color(RGB(0,1,0));
+        COLOR_APP(RGB(0,1,0));
     }
 }
 
@@ -144,16 +144,16 @@ static void check(void)
 {
     struct spt_pdu pdu;
 
-    set_color(RGB(1,0,0)); /*lighter red*/
+    COLOR_APP(RGB(1,0,0));
     if (myspt->checks == myspt->nchilds) {
         pdu.root = myspt->root;
         pdu.type = PDU_TYPE_CHECK;
         /* Check departs from leafs */
-        TRACE("TX CHECK <dst=%u ,root=%u>\n", myspt->parent, myspt->root);
+        TRACE_APP("TX CHECK <dst=%u ,root=%u>\n", myspt->parent, myspt->root);
         if (pdu_send(&pdu, myspt->parent) < 0) {
             ASSERT(0);
         }
-        set_color(RGB(0,1,0));
+        COLOR_APP(RGB(0,1,0));
     }
 }
 
@@ -170,9 +170,9 @@ static void construct(addr_t src, addr_t root)
 
     pdu.type = PDU_TYPE_YES;
     pdu.root = root;
-    TRACE("TX Y <dst=%u ,root=%u>\n", src, myspt->root);
+    TRACE_APP("TX Y <dst=%u ,root=%u>\n", src, myspt->root);
     if (pdu_send(&pdu, src) < 0) {
-        TRACE("Error: pdu send\n");
+        TRACE_APP("Error: pdu send\n");
         ASSERT(0);
         return;
     }
@@ -184,7 +184,7 @@ static void construct(addr_t src, addr_t root)
         ASSERT(myspt->notify_num == 0);
         myspt->notify_num = mydata->nneighbors;
         myspt->notify_skp = src;
-        APP_COLOR(RED);
+        COLOR_APP(RED);
     }
 }
 
@@ -194,7 +194,7 @@ static void active(struct spt_pdu *pdu, addr_t src)
 {
     switch (pdu->type) {
     case PDU_TYPE_Q:
-        TRACE("RX Q <src=%u ,root=%u>\n", src, pdu->root);
+        TRACE_APP("RX Q <src=%u ,root=%u>\n", src, pdu->root);
         if (myspt->root == pdu->root) {
             myspt->counter++;
             if (myspt->counter == mydata->nneighbors)
@@ -204,7 +204,7 @@ static void active(struct spt_pdu *pdu, addr_t src)
         }
         break;
     case PDU_TYPE_YES:
-        TRACE("RX Y <src=%u ,root=%u>\n", src, pdu->root);
+        TRACE_APP("RX Y <src=%u ,root=%u>\n", src, pdu->root);
         if (myspt->root == pdu->root) {
             child_add(src);
             myspt->counter++;
@@ -213,7 +213,7 @@ static void active(struct spt_pdu *pdu, addr_t src)
         }
         break;
     case PDU_TYPE_CHECK:
-        TRACE("RX CHECK <src=%u ,root=%u>\n", src, pdu->root);
+        TRACE_APP("RX CHECK <src=%u ,root=%u>\n", src, pdu->root);
         if (myspt->root == pdu->root) {
             myspt->checks++;
             if (myspt->counter == mydata->nneighbors &&
@@ -222,10 +222,10 @@ static void active(struct spt_pdu *pdu, addr_t src)
         }
         break;
     case PDU_TYPE_TERM:
-        TRACE("RX TERM <src=%u ,root=%u>\n", src, myspt->root);
+        TRACE_APP("RX TERM <src=%u ,root=%u>\n", src, myspt->root);
         myspt->state = SPT_STATE_DONE;
-        APP_COLOR(GREEN);
-        TRACE("send term to (%u) childs\n", myspt->nchilds);
+        COLOR_APP(GREEN);
+        TRACE_APP("send term to (%u) childs\n", myspt->nchilds);
         ASSERT(myspt->notify_num == 0);
         if (myspt->nchilds > 0) {
             myspt->notify_num = myspt->nchilds;
@@ -242,7 +242,7 @@ static void active(struct spt_pdu *pdu, addr_t src)
 static void idle(struct spt_pdu *pdu, addr_t src)
 {
     if (pdu->type == PDU_TYPE_Q) {
-        TRACE("RX Q <src=%u ,root=%u>\n", src, pdu->root);
+        TRACE_APP("RX Q <src=%u ,root=%u>\n", src, pdu->root);
         myspt->state = SPT_STATE_ACTIVE;
         construct(src, pdu->root);
     }
@@ -251,7 +251,7 @@ static void idle(struct spt_pdu *pdu, addr_t src)
 
 static void start_protocol(void)
 {
-    APP_COLOR(RED);
+    COLOR_APP(RED);
     myspt->state = SPT_STATE_ACTIVE;
     myspt->root = kilo_uid;
     myspt->notify_num = mydata->nneighbors;
@@ -271,7 +271,7 @@ static int is_neighbor(addr_t addr)
 
 static void timeout(addr_t dst, uint8_t *data, uint8_t siz)
 {
-    TRACE("TIMEOUT sending to %u\n", dst);
+    TRACE_APP("TIMEOUT sending to %u\n", dst);
     // TODO: remove from neighbor list
     ASSERT(0);
 }
@@ -296,17 +296,17 @@ next:
         goto next;
 
     if (myspt->state == SPT_STATE_DONE) {
-        TRACE("TX TERM <dst=%u ,root=%u>\n", dst, myspt->root);
+        TRACE_APP("TX TERM <dst=%u ,root=%u>\n", dst, myspt->root);
         pdu.type = PDU_TYPE_TERM;
     } else {
-        TRACE("TX Q <dst=%u ,root=%u>\n", dst, myspt->root);
+        TRACE_APP("TX Q <dst=%u ,root=%u>\n", dst, myspt->root);
         pdu.type = PDU_TYPE_Q;
     }
     pdu.root = myspt->root;
     if (pdu_send(&pdu, dst) < 0) {
         myspt->notify_num++;
         myspt->start = kilo_ticks + 5 * KILO_TICKS_PER_SEC;
-        TRACE("Q/TERM send fail\n");
+        TRACE_APP("Q/TERM send fail\n");
     }
 }
 
@@ -348,7 +348,7 @@ void spt_loop(void)
 void spt_init(void)
 {
     memset(myspt, 0, sizeof(*myspt));
-    APP_COLOR(WHITE);
+    COLOR_APP(WHITE);
     myspt->state = SPT_STATE_IDLE;
     myspt->parent = BROADCAST_ADDR;
     mydata->chan.timeout_cb = timeout;

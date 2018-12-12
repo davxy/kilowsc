@@ -20,7 +20,7 @@
 
 void print_dist(void)
 {
-    TRACE("DIST: %u\n", mywsc->dist);
+    TRACE_APP("DIST: %u\n", mywsc->dist);
 }
 
 int wsc_send(void)
@@ -83,7 +83,7 @@ static void update_hunter(uint8_t src, uint8_t dist, uint8_t force)
         rand_turn();
         mywsc->move_tick = kilo_ticks + (3 + rand() % 10) * KILO_TICKS_PER_SEC;
         mywsc->sstate = SUBSTATE_AVOID_COLLISION;
-        TRACE("!!!!!!!!!!AVOID COLLISION!!!!\n");
+        TRACE_APP("!!!!!!!!!!AVOID COLLISION!!!!\n");
         return;
     }
 
@@ -93,9 +93,9 @@ static void update_hunter(uint8_t src, uint8_t dist, uint8_t force)
                 set_motors(kilo_turn_left, 0);
                 mywsc->move = MOVE_LEFT;
                 mywsc->move_tick = kilo_ticks + UTURN_TIME * KILO_TICKS_PER_SEC;
-                TRACE("U TURN\n");
+                TRACE_APP("U TURN\n");
             } else {
-                TRACE("Ignore (src=%u, approaching=%u)\n", src, mywsc->dist_src);
+                TRACE_APP("Ignore (src=%u, approaching=%u)\n", src, mywsc->dist_src);
             }
         } else if (mywsc->move_tick < kilo_ticks) {
             if (mywsc->move == MOVE_STRAIGHT) {
@@ -107,7 +107,7 @@ static void update_hunter(uint8_t src, uint8_t dist, uint8_t force)
                 mywsc->move = MOVE_STRAIGHT;
                 mywsc->move_tick = kilo_ticks + 10 * KILO_TICKS_PER_SEC;
             }
-            TRACE("HUNT\n");
+            TRACE_APP("HUNT\n");
         }
         mywsc->sstate = SUBSTATE_HUNTING;
     } else if ((dist < mywsc->dist && (mywsc->dist - dist) > 5)
@@ -116,13 +116,13 @@ static void update_hunter(uint8_t src, uint8_t dist, uint8_t force)
         mywsc->move = MOVE_STRAIGHT;
         mywsc->sstate = SUBSTATE_APPROACHING;
         mywsc->dist_src = src;
-        TRACE("APPROACH to %u\n", src);
+        TRACE_APP("APPROACH to %u\n", src);
     }
 
 
     if (force || dist < mywsc->dist) {
         mywsc->dist = dist;
-        TRACE("DIST: %u\n", mywsc->dist);
+        TRACE_APP("DIST: %u\n", mywsc->dist);
     }
 }
 
@@ -145,14 +145,14 @@ static void active_hunter(void)
 
     if (mydata->color != mywsc->target && mywsc->blink_tick < kilo_ticks) {
         if (mywsc->color_enabled == 1 && mywsc->dist != DIST_MAX) {
-            set_color(0);
+            COLOR_APP(WHITE);
             mywsc->color_enabled = 0;
         } else {
-            set_color(mydata->color);
+            COLOR_APP(mydata->color);
             mywsc->color_enabled = 1;
         }
         offset = M * mywsc->dist - MX1 + BLINK_MIN;
-        //TRACE("OFFSET (%u): %u\n", mywsc->dist, offset);
+        //TRACE_APP("OFFSET (%u): %u\n", mywsc->dist, offset);
         mywsc->blink_tick = kilo_ticks + offset;
     }
 
@@ -170,7 +170,7 @@ static void active_target(void)
     /* Message */
     if (mywsc->echo_tick < kilo_ticks) {
         mywsc->echo_tick = kilo_ticks + KILO_TICKS_PER_SEC;
-        set_color((uint8_t)kilo_ticks);
+        COLOR_APP((uint8_t)kilo_ticks);
         wsc_send();
     }
 }
@@ -190,7 +190,7 @@ static void spontaneous(void)
     //if (mywsc->target == mydata->color)
     //    mywsc->target = (mywsc->target + 1) % mydata->nodes;
     mywsc->target = 0;
-    TRACE("WSC: %u\n", mywsc->target);
+    TRACE_APP("WSC: %u\n", mywsc->target);
     idle(kilo_uid, mywsc->target, 0);
 }
 

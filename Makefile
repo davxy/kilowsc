@@ -10,6 +10,7 @@
 KILO_PATH := /home/davxy/dev/kilobot/kilombo/install/usr/local
 
 CC := gcc
+
 CPPFLAGS := -I$(KILO_PATH)/include -DSIM
 CFLAGS := -g -O0 -Wall -pedantic
 LDLIBS := -L$(KILO_PATH)/lib -lsim -lSDL -lm -ljansson

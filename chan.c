@@ -44,11 +44,9 @@ static int ack_send(addr_t dst)
 {
     int res;
 
-#ifdef VERBOSE_CHAN
-    TRACE("ACK SEND to %u\n", dst);
-#endif
+    TRACE_CHAN("ACK SEND to %u\n", dst);
     if ((res = buf_write(&mychan->ack_buf, &dst, 1)) < 0)
-        TRACE("ACK FAIL\n");
+        TRACE_CHAN("ACK SEND FAIL\n");
     return res;
 }
 
@@ -58,7 +56,7 @@ int chan_send(addr_t dst, uint8_t *data, uint8_t size)
     int res;
 
     if ((res = chan_buf_write(&mychan->tx_buf, dst, data, size)) < 0)
-        TRACE("TX FAIL\n");
+        TRACE_CHAN("TX FAIL\n");
     return res;
 }
 
@@ -95,19 +93,13 @@ static message_t *message_tx(void)
             mychan->sent = kilo_ticks;
             mychan->count++;
             msg = &mychan->msg;
-            TRACE("Retry (%u)\n", mychan->count);
+            TRACE_CHAN("Retry (%u)\n", mychan->count);
         } else {
-            TRACE("Give up\n");
-
-#ifdef VERBOSE_CHAN
-            TRACE("Give up\n");
-#endif
+            TRACE_CHAN("Give up\n");
             msg = NULL;
             mychan->state = CHAN_STATE_IDLE;
             mychan->count = 0;
-#ifdef VISUAL_CHAN
-            SET_IDLE();
-#endif
+            COLOR_CHAN(WHITE);
             if (mychan->timeout_cb != NULL) {
                 mychan->timeout_cb(mychan->msg.data[1],
                                    mychan->msg.data + HEAD_SIZE,
@@ -128,10 +120,8 @@ static message_t *message_tx(void)
         msg->data[1] = dst;
         msg->data[2] = flg;
         msg->crc = message_crc(msg);
-#ifdef VERBOSE_CHAN
-        TRACE("SEND: src=%u, dst=%u (CON=%d,ACK=%d,SEQ=%u)\n",
-            kilo_uid, dst, 0, 1,(flg & PDU_FLAG_SEQ) != 0);
-#endif
+        TRACE_CHAN("SEND: src=%u, dst=%u (CON=%d,ACK=%d,SEQ=%u)\n",
+                   kilo_uid, dst, 0, 1,(flg & PDU_FLAG_SEQ) != 0);
         return msg;
     }
 
@@ -139,9 +129,7 @@ static message_t *message_tx(void)
     flg = SDU_MAX;
     if (mychan->state != CHAN_STATE_IDLE ||
         chan_buf_read(&mychan->tx_buf, &dst, msg->data + HEAD_SIZE, &flg) < 0) {
-#ifdef VISUAL_CHAN
-        SET_IDLE();
-#endif
+        COLOR_CHAN(WHITE);
         return NULL;
     }
 
@@ -162,17 +150,10 @@ static message_t *message_tx(void)
     msg->data[2] = flg;
     msg->crc = message_crc(msg);
 
-#ifdef VERBOSE_CHAN
-    TRACE("SEND: src=%u, dst=%u (CON=%d,ACK=%d,SEQ=%u,LEN=%u)\n",
-            kilo_uid, dst,
-            (flg & PDU_FLAG_CON) != 0,
-            (flg & PDU_FLAG_ACK) != 0,
-            (flg & PDU_FLAG_SEQ) != 0,
-            (flg & PDU_LEN_MASK));
-#endif
-#ifdef VISUAL_CHAN
-    SET_ACTIVE();
-#endif
+    TRACE_CHAN("SEND: src=%u, dst=%u (CON=%d,ACK=%d,SEQ=%u,LEN=%u)\n",
+            kilo_uid, dst, (flg & PDU_FLAG_CON) != 0, (flg & PDU_FLAG_ACK) != 0,
+            (flg & PDU_FLAG_SEQ) != 0, (flg & PDU_LEN_MASK));
+    COLOR_CHAN(RED);
 
     return msg;
 }
@@ -196,13 +177,9 @@ static void message_rx(message_t *m, distance_measurement_t *d)
         return; /* not our business */
 
     dist = estimate_distance(d);
-#ifdef VERBOSE_CHAN
-    TRACE("RECV: src=%u, dst=%u (CON=%d,ACK=%d,DIST=%u)\n",
-            src, dst,
-            (flg & PDU_FLAG_CON) != 0,
-            (flg & PDU_FLAG_ACK) != 0,
-            dist);
-#endif
+    TRACE_CHAN("RECV: src=%u, dst=%u (CON=%d,ACK=%d,SEQ=%u,LEN=%u,DIST=%u)\n",
+            src, dst, (flg & PDU_FLAG_CON) != 0, (flg & PDU_FLAG_ACK) != 0,
+            (flg & PDU_FLAG_SEQ) != 0, (flg & PDU_LEN_MASK), dist);
 
     /* Check if is an ACK */
     if ((flg & PDU_FLAG_ACK) != 0) {
@@ -212,15 +189,13 @@ static void message_rx(message_t *m, distance_measurement_t *d)
             exp_addr = mychan->msg.data[1]; /* read from last sent message */
             if (exp_addr == src) {
                 if (((flg & PDU_FLAG_SEQ) != 0) != mychan->tx_seq[src]) {
-                    TRACE("IGNORE DUPLICATE ACK\n");
+                    TRACE_CHAN("IGNORE DUPLICATE ACK\n");
                     ASSERT(0);  /* Should never happen */
                     return;     /* Wrong ack no */
                 }
                 mychan->tx_seq[src] = 1 ^ mychan->tx_seq[src];
                 mychan->state = CHAN_STATE_IDLE; /* Ack received */
-#ifdef VISUAL_CHAN
-                SET_IDLE();
-#endif
+                COLOR_CHAN(WHITE);
             }
         }
         return;
@@ -228,7 +203,7 @@ static void message_rx(message_t *m, distance_measurement_t *d)
 
     if ((flg & PDU_FLAG_CON) != 0) {
         if (((flg & PDU_FLAG_SEQ) != 0) != mychan->rx_seq[src]) {
-            TRACE(">>> IGNORE DUPLICATE INFO (send ack)\n");
+            TRACE_CHAN(">>> IGNORE DUPLICATE INFO (send ack)\n");
             /* This change the ack number to the correct one */
             mychan->rx_seq[src] = 1 - mychan->rx_seq[src];
             ack_send(src);
@@ -242,20 +217,19 @@ static void message_rx(message_t *m, distance_measurement_t *d)
     uint8_t len = flg & PDU_LEN_MASK;
 
     if (len > SDU_MAX) {
-        TRACE(">>> IGNORE MSG WITH BAD LEN\n");
+        TRACE_CHAN("Ignore msg with bad len field\n");
         return;
     }
     data[0] = dist;
     memcpy(data + 1, m->data + HEAD_SIZE, len);
     if (chan_buf_write(&mychan->rx_buf, src, data, len + 1) != 0) {
-        TRACE("LOST INFO (hope for retry)\n");
+        TRACE_CHAN("Definitely lost rx info (hope for retry)\n");
         return; /* Drop for exhausted capacity */
     }
 
     /* Check if requires confirmation */
-    if ((flg & PDU_FLAG_CON) != 0) {
+    if ((flg & PDU_FLAG_CON) != 0)
         ack_send(src);
-    }
 }
 
 void chan_flush(void)

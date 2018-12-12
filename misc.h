@@ -1,6 +1,20 @@
 #ifndef MISC_H_
 #define MISC_H_
 
+//#define DEBUG_CHAN
+#define DEBUG_APP
+
+#ifdef DEBUG_CHAN
+#define VISUAL_CHAN
+#define VERBOSE_CHAN
+#endif
+
+#ifdef DEBUG_APP
+#define VISUAL_APP
+#define VERBOSE_APP
+#endif
+
+
 #ifndef SIM
 #define SIM
 #endif
@@ -12,27 +26,7 @@
 #else
 #include <kilolib.h>    /* kilobot stand alone library */
 #include <avr/io.h>     /* microcontroller registers */
-#endif /* SIMULATOR */
-
-
-//#define DEBUG_CHAN
-//#define DEBUG_APP
-
-//#define VERBOSE_CHAN
-//#define VERBOSE_DISCOVER
-
-//#define VISUAL_CHAN
-#define VISUAL_APP
-
-#ifdef DEBUG_CHAN
-#define VISUAL_CHAN
-#define VERBOSE_CHAN
-#endif
-
-#ifdef DEBUG_APP
-#define VISUAL_APP
-#define VERBOSE_APP
-#endif
+#endif /* SIM */
 
 
 #ifdef SIM
@@ -55,16 +49,32 @@
 #endif /* SIM */
 
 
-#ifdef VISUAL_APP
-#define APP_COLOR(col) set_color(col)
+#ifdef VERBOSE_APP
+#define TRACE_APP(...)  TRACE(__VA_ARGS__)
+#define TRACE2_APP(...) TRACE2(__VA_ARGS__)
 #else
-#define APP_COLOR(col) ;
+#define TRACE_APP(...)  ;
+#define TRACE2_APP(...) ;
+#endif
+
+#ifdef VERBOSE_CHAN
+#define TRACE_CHAN(...)  TRACE(__VA_ARGS__)
+#define TRACE2_CHAN(...) TRACE2(__VA_ARGS__)
+#else
+#define TRACE_CHAN(...)  ;
+#define TRACE2_CHAN(...) ;
+#endif
+
+#ifdef VISUAL_APP
+#define COLOR_APP(col) set_color(col)
+#else
+#define COLOR_APP(col) ;
 #endif
 
 #ifdef VISUAL_CHAN
-#define CHN_COLOR(col) set_color(col)
+#define COLOR_CHAN(col) set_color(col)
 #else
-#define CHN_COLOR(col) ;
+#define COLOR_CHAN(col) ;
 #endif
 
 
