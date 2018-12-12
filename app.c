@@ -5,6 +5,7 @@
 
 REGISTER_USERDATA(app_ctx_t)
 
+#define SKIP_ELECTION
 
 static void loop(void)
 {
@@ -23,7 +24,11 @@ static void loop(void)
         }
         break;
     case APP_PROTO_SPT:
+#ifndef SKIP_SPT
         spt_loop();
+#else
+        mydata->spt.state = SPT_STATE_DONE;
+#endif
         if (mydata->spt.state == SPT_STATE_DONE &&
                 mydata->spt.notify_num == 0 &&
                 buf_size(&mydata->chan.tx_buf) == 0) {
@@ -54,21 +59,25 @@ static void loop(void)
 
 static void setup(void)
 {
-    memset(mydata, 0, sizeof(*mydata));
-
-    chan_init(0, NULL);
-
-    discover_init();
-    mydata->proto = APP_PROTO_DIS;
-
     set_motors(0, 0);
     set_color(WHITE);
 
-    /* FIXME : Temporary code... JUMP TO WSC */
-    wsc_init();
+    /* Communication channel init */
+    chan_init(0, NULL);
+
+    /* Application data init */
+    memset(mydata, 0, sizeof(*mydata));
+
+#ifndef SKIP_ELECTION
+    mydata->proto = APP_PROTO_DIS;
+    discover_init();
+#else
     mydata->proto = APP_PROTO_WSC;
     mydata->color = kilo_uid;
-    mydata->nodes = 10;
+    mydata->nodes = 1; /* Prevents div by zero */
+    mydata->neighbors[0] =(kilo_uid == 0) ? kilo_uid : BROADCAST_ADDR;
+    wsc_init();
+#endif
 }
 
 int main(void)
