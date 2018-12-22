@@ -23,19 +23,18 @@ static void loop(void)
         break;
     case APP_PROTO_SPT:
         spt_loop();
-#if 0
-        if (mydata->spt.state == SPT_STATE_DONE &&
-                mydata->spt.notify_num == 0 &&
-                buf_size(&mydata->chan.tx_buf) == 0) {
-            mydata->proto = APP_PROTO_SPT;
-            COLOR_APP(WHITE);
+        if (mydata->spt.state == SPT_STATE_DONE) {
+            mydata->proto = APP_PROTO_WSC;
+            mydata->nodes = mydata->spt.counter;
             mydata->neighbors[0] = mydata->spt.parent;
             memcpy(mydata->neighbors + 1, mydata->spt.childs,
-                    mydata->spt.nchilds * sizeof(mydata->neighbors[0]));
+                   mydata->spt.nchilds * sizeof(mydata->neighbors[0]));
             mydata->nneighbors = mydata->spt.nchilds + 1;
-            wsc_init();
+            if (kilo_uid == mydata->neighbors[0])
+                TRACE_APP(">>> LEADER\n");
+            TRACE_APP("Players: %u\n", mydata->nodes);
+            //wsc_init();
         }
-#endif
         break;
     case APP_PROTO_WSC:
         //wsc_loop();

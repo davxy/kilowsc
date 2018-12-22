@@ -6,7 +6,8 @@
 
 #define SPT_STATE_IDLE      0
 #define SPT_STATE_ACTIVE    1
-#define SPT_STATE_DONE      2
+#define SPT_STATE_TERM      2
+#define SPT_STATE_DONE      3
 
 #define CHILDS_MAX          32
 
