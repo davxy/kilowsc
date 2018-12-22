@@ -8,7 +8,7 @@
 #define SPT_STATE_ACTIVE    1
 #define SPT_STATE_DONE      2
 
-#define CHILDS_MAX          16
+#define CHILDS_MAX          32
 
 struct spt_ctx {
     uint32_t    start;

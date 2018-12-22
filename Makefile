@@ -17,7 +17,7 @@ LDLIBS := -L$(KILO_PATH)/lib -lsim -lSDL -lm -ljansson
 
 .PHONY: all clean
 
-objects := app.o buf.o chan.o discover.o spt.o color.o wsc.o
+objects := app.o buf.o chan.o discover.o spt.o wsc.o
 
 target := wsc
 

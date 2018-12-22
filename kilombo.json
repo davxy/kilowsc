@@ -1,15 +1,15 @@
 {
     "botName" : "WSC",
     "randSeed" : 0,
-    "nBots" : 10,
+    "nBots" : 30,
     "timeStep" : 0.0416666,
     "simulationTime" : 10000.0,
     "commsRadius" : 100,
     "showComms" : 1,
     "showCommsRadius" : 1,
-    "distributePercent" : 0.4,
-    "displayWidth"  : 900,
-    "displayHeight" : 900,
+    "distributePercent" : 0.5,
+    "displayWidth"  : 700,
+    "displayHeight" : 700,
     "displayWidthPercent" : 80,
     "displayHeightPercent" : 80,
     "displayScale"  : 1,
@@ -25,5 +25,5 @@
     "stateFileName" : "simstates.json",
     "stateFileSteps" : 0,
     "GUI" : 1,
-    "msgSuccessRate" : 1.9
+    "msgSuccessRate" : 1.0
 }
