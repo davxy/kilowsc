@@ -1,35 +1,17 @@
 #ifndef MISC_H_
 #define MISC_H_
 
-//#define DEBUG_CHAN
-#define DEBUG_APP
-
-#ifdef DEBUG_CHAN
-#define VISUAL_CHAN
-#define VERBOSE_CHAN
-#endif
-
-#ifdef DEBUG_APP
-#define VISUAL_APP
-#define VERBOSE_APP
-#endif
-
-
-#ifndef SIM
-#define SIM
-#endif
-
-#ifdef SIM
+#ifdef KILOMBO
 #include <kilombo.h>
 #include <stdio.h>
 #include <assert.h>
 #else
 #include <kilolib.h>    /* kilobot stand alone library */
 #include <avr/io.h>     /* microcontroller registers */
-#endif /* SIM */
+#endif /* KILOMBO */
 
 
-#ifdef SIM
+#ifdef KILOMBO
 
 #define TRACE2(...) do { \
     fprintf(stdout, __VA_ARGS__); \
@@ -46,7 +28,7 @@
 #define TRACE2(...) ;
 #define TRACE(...)  ;
 
-#endif /* SIM */
+#endif /* KILOMBO */
 
 
 #ifdef VERBOSE_APP
@@ -94,7 +76,7 @@
 #define MAX(a, b) ((a) > (b) ? (a) : (b))
 #endif
 
-#ifdef SIM
+#ifdef KILOMBO
 #define ASSERT(cond) assert(cond)
 #else
 #define ASSERT(cond) ;
