@@ -121,8 +121,6 @@ static int collision_avoid(uint8_t src)
     return res;
 }
 
-
-
 static void update_hunter(uint8_t src, uint8_t dist, uint8_t force)
 {
     uint8_t prev_dist = mywsc->dist;
@@ -132,28 +130,13 @@ static void update_hunter(uint8_t src, uint8_t dist, uint8_t force)
         mywsc->dist = dist;
         mywsc->dist_src = src;
         mywsc->aging_tick = kilo_ticks + AGING_PERIOD_TICKS;
-        TRACE_APP("DISTANCE: %u\n", mywsc->dist);
+
     }
 
-    if (mywsc->dist <= DIST_MIN) {
-        MOVE_STOP();
-        return;
-    }
-
-    /* First collision avoidance (FIXME) */
-    if (dist != mydata->chan.dist && mydata->chan.dist <= COLLISION_DIST) {
-        if (src < kilo_uid)
-            MOVE_LEFT();
-        else
-            MOVE_STOP();
-        mywsc->move_tick = kilo_ticks + (3 + rand() % 10) * KILO_TICKS_PER_SEC;
-        TRACE_APP("AVOID COLLISION (%s)!!!!\n",
-                (mywsc->move == MOVING_LEFT) ? "left" : "stop");
-        return;
-    }
-
-    if (dist > prev_dist) {// || prev_dist == DIST_MAX) {
-        if (mywsc->flags & WSC_FLAG_APPROACH) {
+    if (dist > prev_dist || dist == DIST_MAX || src == kilo_uid) {
+        /* Distance has increased */
+        if ((mywsc->flags & WSC_FLAG_APPROACH) != 0) {
+            /* Was approaching */
             if (src == mywsc->dist_src) {
                 mywsc->move_tick = kilo_ticks + UTURN_TICKS;
                 MOVE_LEFT();
@@ -178,6 +161,7 @@ static void update_hunter(uint8_t src, uint8_t dist, uint8_t force)
         mywsc->flags |= WSC_FLAG_APPROACH;
         TRACE_APP("APPROACHING to %u\n", src);
     }
+    TRACE_APP("DISTANCE: %u\n", mywsc->dist);
 }
 
 static void blink(void)
@@ -234,14 +218,7 @@ void wsc_loop(void)
     }
 
     /* Fetch a message (target silently ignores messages) */
-    if (wsc_recv(&src, &pdu) == 0 && mydata->uid != mywsc->target) {
-        /*
-         * Distance from target is computed as the one transported within
-         * the message plus the distance detected at channel level.
-         */
-        dist = ((uint16_t)pdu.dis + mydata->chan.dist < DIST_MAX) ?
-                pdu.dis + mydata->chan.dist : DIST_MAX;
-
+    if (wsc_recv(&src, &pdu) == 0) {
         if (mydata->uid == mywsc->target && mydata->chan.dist <= DIST_MIN) {
             TRACE(">>> CATCHED <<<\n");
             mywsc->match_cnt++;
@@ -252,6 +229,13 @@ void wsc_loop(void)
             mywsc->echo_tick = kilo_ticks + ESCAPE_TIME_TICKS;
             return;
         }
+
+        /*
+         * Distance from target is computed as the one transported within
+         * the message plus the distance detected at channel level.
+         */
+        dist = ((uint16_t)pdu.dis + mydata->chan.dist < DIST_MAX) ?
+                pdu.dis + mydata->chan.dist : DIST_MAX;
 
         /* Safety first */
         if (mywsc->target != src && mywsc->state == WSC_STATE_ACTIVE) {
@@ -272,6 +256,7 @@ void wsc_loop(void)
         if (mywsc->state != WSC_STATE_IDLE) {
             /* Check if a new match is started */
             if (pdu.mch > mywsc->match_cnt) {
+                COLOR_APP(mydata->uid);
                 if (pdu.tar != mydata->uid) {
                     mywsc->dist = pdu.dis;
                     mywsc->dist_src = src;
