@@ -101,7 +101,7 @@ static void update_hunter(uint8_t src, uint8_t dist, uint8_t force)
     if (force == 1 || dist < prev_dist) {
         mywsc->dist = dist;
         mywsc->dist_src = src;
-        mywsc->dina_tick = kilo_ticks + ENV_DYN_PERIOD_TICKS;
+        mywsc->aging_tick = kilo_ticks + ENV_DYN_PERIOD_TICKS;
         TRACE_APP("DISTANCE: %u\n", mywsc->dist);
     }
 
@@ -155,37 +155,27 @@ static void update_hunter(uint8_t src, uint8_t dist, uint8_t force)
 #define M   (((float)BLINK_MAX - BLINK_MIN) / (DIST_MAX - DIST_MIN))
 #define MX1 (M * DIST_MIN)
 
+static void blink(void)
+{
+    if ((mywsc->flags & WSC_FLAG_COLOR_ON) && mywsc->dist != DIST_MAX) {
+        COLOR_APP(WHITE);
+        mywsc->flags &= ~WSC_FLAG_COLOR_ON;
+    } else {
+        COLOR_APP(mydata->uid);
+        mywsc->flags |= WSC_FLAG_COLOR_ON;
+    }
+}
+
 static void active_hunter(void)
 {
-    uint32_t offset;
-
-    /* Environment dynamics */
-    if (mywsc->state == WSC_STATE_ACTIVE && mywsc->dina_tick < kilo_ticks) {
+    /* Distance information aging */
+    if (mywsc->aging_tick < kilo_ticks) {
         uint8_t dist;
 
-        mywsc->dina_tick = kilo_ticks + ENV_DYN_PERIOD_TICKS;
+        mywsc->aging_tick = kilo_ticks + ENV_DYN_PERIOD_TICKS;
         dist = ((uint16_t)mywsc->dist + ENV_DYN_QUANTITY < DIST_MAX) ?
                 mywsc->dist + ENV_DYN_QUANTITY : DIST_MAX;
         update_hunter(mywsc->dist_src, dist, 1);
-    }
-
-    if (mydata->uid != mywsc->target && mywsc->blink_tick < kilo_ticks) {
-        if ((mywsc->flags & WSC_FLAG_COLOR_ON) && mywsc->dist != DIST_MAX) {
-            COLOR_APP(WHITE);
-            mywsc->flags &= ~WSC_FLAG_COLOR_ON;
-        } else {
-            COLOR_APP(mydata->uid);
-            mywsc->flags |= WSC_FLAG_COLOR_ON;
-        }
-        offset = M * mywsc->dist - MX1 + BLINK_MIN;
-        //TRACE_APP("OFFSET (%u): %u\n", mywsc->dist, offset);
-        mywsc->blink_tick = kilo_ticks + offset;
-    }
-
-    /* Message */
-    if (mywsc->echo_tick < kilo_ticks) {
-        mywsc->echo_tick = kilo_ticks + ECHO_PERIOD_TICKS;
-        wsc_send();
     }
 }
 
@@ -193,12 +183,6 @@ static void active_target(void)
 {
     /* Movement strategy */
 
-    /* Message */
-    if (mywsc->echo_tick < kilo_ticks) {
-        mywsc->echo_tick = kilo_ticks + KILO_TICKS_PER_SEC;
-        COLOR_APP((uint8_t)kilo_ticks);
-        wsc_send();
-    }
 }
 
 static void idle(uint8_t src, uint8_t col, uint8_t dist)
@@ -238,7 +222,7 @@ void wsc_loop(void)
     if (wsc_recv(&src, &col, &dist) == 0 && mydata->uid != mywsc->target) {
         /* Eventually refresh the env dynamics timer */
         if (src == mywsc->dist_src)
-            mywsc->dina_tick = kilo_ticks + 5 * KILO_TICKS_PER_SEC;
+            mywsc->aging_tick = kilo_ticks + 5 * KILO_TICKS_PER_SEC;
         /*
          * Distance from target is computed as the one transported within
          * the message plus the distance detected at channel level.
@@ -260,10 +244,17 @@ void wsc_loop(void)
 
     /* Active loop */
     if (mywsc->state == WSC_STATE_ACTIVE) {
+        if (mywsc->echo_tick < kilo_ticks) {
+            mywsc->echo_tick = kilo_ticks + ECHO_PERIOD_TICKS;
+            if (mywsc->target == mydata->uid)
+                blink();
+            wsc_send();
+        }
         if (mydata->uid != mywsc->target)
             active_hunter();
         else
             active_target();
+        /* Message */
     }
 }
 
@@ -272,4 +263,5 @@ void wsc_init(void)
     memset(mywsc, 0, sizeof(*mywsc));
     mywsc->dist =  DIST_MAX;
     mywsc->dist_src = mydata->uid;
+    COLOR_APP(mydata->uid);
 }

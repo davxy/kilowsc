@@ -15,17 +15,17 @@
 
 /**Protocol context */
 struct wsc_ctx {
-    uint32_t    dina_tick;
-    uint32_t    echo_tick;
-    uint32_t    blink_tick;
-    uint32_t    move_tick;
-    uint8_t     flags;
-    uint8_t     state;
-    uint8_t     nodes;
-    uint8_t     target;
-    uint8_t     dist;
-    uint8_t     dist_src;
-    uint8_t     move;
+    uint32_t aging_tick;    /** Used to increment the current dist. */
+    uint32_t echo_tick;     /** Used to periodically transmit current dist. */
+    uint32_t move_tick;
+    uint32_t blink_tick;
+    uint8_t  flags;
+    uint8_t  state;
+    uint8_t  nodes;
+    uint8_t  target;
+    uint8_t  dist;
+    uint8_t  dist_src;
+    uint8_t  move;
 };
 
 /** Protocol initialization */
