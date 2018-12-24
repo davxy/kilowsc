@@ -106,7 +106,6 @@ static void update_hunter(uint8_t src, uint8_t dist, uint8_t force)
     }
 
     if (mywsc->dist <= DIST_MIN) {
-        mywsc->sstate = SUBSTATE_FINISH;
         MOVE_STOP();
         return;
     }
@@ -125,7 +124,7 @@ static void update_hunter(uint8_t src, uint8_t dist, uint8_t force)
     }
 
     if (dist > prev_dist) {// || prev_dist == DIST_MAX) {
-        if (mywsc->sstate == SUBSTATE_APPROACHING) {
+        if (mywsc->flags & WSC_FLAG_APPROACH) {
             if (src == mywsc->dist_src) {
                 mywsc->move_tick = kilo_ticks + UTURN_TICKS;
                 MOVE_LEFT();
@@ -143,11 +142,11 @@ static void update_hunter(uint8_t src, uint8_t dist, uint8_t force)
             }
             TRACE_APP("HUNTING\n");
         }
-        mywsc->sstate = SUBSTATE_HUNTING;
+        mywsc->flags &= ~WSC_FLAG_APPROACH;
     } else if ((dist < prev_dist && (prev_dist - dist) > 3)
             || mywsc->move_tick < kilo_ticks) {
         MOVE_FRONT();
-        mywsc->sstate = SUBSTATE_APPROACHING;
+        mywsc->flags |= WSC_FLAG_APPROACH;
         TRACE_APP("APPROACHING to %u\n", src);
     }
 }
@@ -171,12 +170,12 @@ static void active_hunter(void)
     }
 
     if (mydata->color != mywsc->target && mywsc->blink_tick < kilo_ticks) {
-        if (mywsc->color_enabled == 1 && mywsc->dist != DIST_MAX) {
+        if ((mywsc->flags & WSC_FLAG_COLOR_ON) && mywsc->dist != DIST_MAX) {
             COLOR_APP(WHITE);
-            mywsc->color_enabled = 0;
+            mywsc->flags &= ~WSC_FLAG_COLOR_ON;
         } else {
             COLOR_APP(mydata->color);
-            mywsc->color_enabled = 1;
+            mywsc->flags |= WSC_FLAG_COLOR_ON;
         }
         offset = M * mywsc->dist - MX1 + BLINK_MIN;
         //TRACE_APP("OFFSET (%u): %u\n", mywsc->dist, offset);

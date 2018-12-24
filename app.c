@@ -2,6 +2,7 @@
 #include <string.h>
 #include <time.h>
 
+#define SKIP_ELECTION
 
 REGISTER_USERDATA(app_ctx_t)
 
