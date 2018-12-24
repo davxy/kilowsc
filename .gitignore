@@ -1,4 +1,5 @@
 *.o
+*.d
 wsc
 endstate.json
 .settings
