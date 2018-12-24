@@ -210,13 +210,6 @@ static void active_target(void)
     MOVE_STOP();
 }
 
-static void idle(uint8_t src, uint8_t target, uint8_t dist)
-{
-    mywsc->target = target;
-    mywsc->state = WSC_STATE_ACTIVE;
-    update_hunter(src, dist, 1);
-}
-
 static void spontaneous(void)
 {
     ASSERT(mydata->nodes != 0);
@@ -276,30 +269,49 @@ void wsc_loop(void)
         if (src == mywsc->dist_src)
             mywsc->aging_tick = kilo_ticks + 5 * KILO_TICKS_PER_SEC;
 
-        switch (mywsc->state) {
-        case WSC_STATE_IDLE:
-            idle(src, pdu.tar, dist);
-            break;
-        case WSC_STATE_ACTIVE:
-            update_hunter(src, dist, 0);
-            break;
-        default:
-            break;
+        if (mywsc->state != WSC_STATE_IDLE) {
+            /* Check if a new match is started */
+            if (pdu.mch > mywsc->match_cnt) {
+                if (pdu.tar != mydata->uid) {
+                    mywsc->dist = pdu.dis;
+                    mywsc->dist_src = src;
+                } else {
+                    mywsc->dist = 0;
+                    mywsc->dist_src = mydata->uid;
+                }
+                dist = mywsc->dist;
+                mywsc->match_cnt = pdu.mch;
+                mywsc->target = pdu.tar;
+                mywsc->flags &= ~WSC_FLAG_APPROACH;
+            } else if (mydata->uid != mywsc->target) {
+                update_hunter(src, dist, 0);
+            }
+        } else {
+            mywsc->state = WSC_STATE_ACTIVE;
+            mywsc->match_cnt = pdu.mch;
+            mywsc->target = pdu.tar;
+            if (pdu.tar != mydata->uid) {
+                mywsc->dist = pdu.dis;
+                mywsc->dist_src = src;
+            } else {
+                mywsc->dist = 0;
+                mywsc->dist_src = mydata->uid;
+            }
         }
     }
 
     /* Active loop */
     if (mywsc->state == WSC_STATE_ACTIVE) {
+        if (mywsc->target != mydata->uid)
+            active_hunter();
+        else
+            active_target();
         if (mywsc->echo_tick < kilo_ticks) {
             mywsc->echo_tick = kilo_ticks + ECHO_PERIOD_TICKS;
             if (mywsc->target == mydata->uid)
                 blink();
             update_send();
         }
-        if (mywsc->target != mydata->uid)
-            active_hunter();
-        else
-            active_target();
     }
 }
 
