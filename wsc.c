@@ -169,12 +169,12 @@ static void active_hunter(void)
         update_hunter(mywsc->dist_src, dist, 1);
     }
 
-    if (mydata->color != mywsc->target && mywsc->blink_tick < kilo_ticks) {
+    if (mydata->uid != mywsc->target && mywsc->blink_tick < kilo_ticks) {
         if ((mywsc->flags & WSC_FLAG_COLOR_ON) && mywsc->dist != DIST_MAX) {
             COLOR_APP(WHITE);
             mywsc->flags &= ~WSC_FLAG_COLOR_ON;
         } else {
-            COLOR_APP(mydata->color);
+            COLOR_APP(mydata->uid);
             mywsc->flags |= WSC_FLAG_COLOR_ON;
         }
         offset = M * mywsc->dist - MX1 + BLINK_MIN;
@@ -214,10 +214,10 @@ static void idle(uint8_t src, uint8_t col, uint8_t dist)
 static void spontaneous(void)
 {
     mywsc->target = rand() % mydata->nodes;
-    if (mywsc->target == mydata->color)
+    if (mywsc->target == mydata->uid)
         mywsc->target = (mywsc->target + 1) % mydata->nodes;
     mywsc->state = WSC_STATE_ACTIVE;
-    mywsc->dist = (mywsc->target != mydata->color) ? DIST_MAX : 0;
+    mywsc->dist = (mywsc->target != mydata->uid) ? DIST_MAX : 0;
     mywsc->dist_src = kilo_uid;
     TRACE_APP("WSC: %u\n", mywsc->target);
     wsc_send();
@@ -235,7 +235,7 @@ void wsc_loop(void)
     }
 
     /* Fetch a message (target drops them) */
-    if (wsc_recv(&src, &col, &dist) == 0 && mydata->color != mywsc->target) {
+    if (wsc_recv(&src, &col, &dist) == 0 && mydata->uid != mywsc->target) {
         /* Eventually refresh the env dynamics timer */
         if (src == mywsc->dist_src)
             mywsc->dina_tick = kilo_ticks + 5 * KILO_TICKS_PER_SEC;
@@ -260,7 +260,7 @@ void wsc_loop(void)
 
     /* Active loop */
     if (mywsc->state == WSC_STATE_ACTIVE) {
-        if (mydata->color != mywsc->target)
+        if (mydata->uid != mywsc->target)
             active_hunter();
         else
             active_target();
@@ -271,5 +271,5 @@ void wsc_init(void)
 {
     memset(mywsc, 0, sizeof(*mywsc));
     mywsc->dist =  DIST_MAX;
-    mywsc->dist_src = kilo_uid;
+    mywsc->dist_src = mydata->uid;
 }

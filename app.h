@@ -14,12 +14,13 @@
 #define NEIGHBORS_MAX   32
 
 struct app_ctx {
-    struct chan_ctx chan;
+    uint8_t         uid;
+    uint8_t         gid;
     uint8_t         nneighbors;
     addr_t          neighbors[NEIGHBORS_MAX];
-    uint8_t         color;
     uint8_t         nodes;
     uint8_t         proto;
+    struct chan_ctx chan;
     union {
         struct discover_ctx  discover;
         struct spt_ctx       spt;

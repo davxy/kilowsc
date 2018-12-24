@@ -33,11 +33,11 @@ static void loop(void)
             if (kilo_uid == mydata->neighbors[0])
                 TRACE_APP(">>> LEADER\n");
             TRACE_APP("Players: %u\n", mydata->nodes);
-            //wsc_init();
+            wsc_init();
         }
         break;
     case APP_PROTO_WSC:
-        //wsc_loop();
+        wsc_loop();
         break;
     default:
         break;
@@ -56,12 +56,14 @@ static void setup(void)
     /* Application data init */
     memset(mydata, 0, sizeof(*mydata));
 
+    mydata->uid = kilo_uid;
+    mydata->gid = BROADCAST_ADDR;
+
 #ifndef SKIP_ELECTION
     mydata->proto = APP_PROTO_DIS;
     discover_init();
 #else
     mydata->proto = APP_PROTO_WSC;
-    mydata->color = kilo_uid;
     mydata->nodes = 1; /* Prevents div by zero */
     mydata->neighbors[0] =(kilo_uid == 0) ? kilo_uid : BROADCAST_ADDR;
     wsc_init();
