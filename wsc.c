@@ -11,9 +11,11 @@
 
 #define AGING_PERIOD_SECONDS    3
 #define ECHO_PERIOD_SECONDS     1
+#define ESCAPE_TIME_SECONDS     5
 
 #define AGING_PERIOD_TICKS      (AGING_PERIOD_SECONDS * KILO_TICKS_PER_SEC)
 #define ECHO_PERIOD_TICKS       (ECHO_PERIOD_SECONDS * KILO_TICKS_PER_SEC)
+#define ESCAPE_TIME_TICKS       (ESCAPE_TIME_SECONDS * KILO_TICKS_PER_SEC)
 
 #define AGING_QUANTITY          10
 
@@ -95,6 +97,30 @@ static int update_send(void)
     pdu.dis = mywsc->dist;
     return wsc_send(BROADCAST_ADDR, &pdu);
 }
+
+/* Returns 1 if imminent collision has been detected */
+static int collision_avoid(uint8_t src)
+{
+    int res = 0;
+
+    /* FIXME: temporary code... */
+    if (mydata->uid == mywsc->target)
+        return 0;
+
+    /* First collision avoidance (FIXME) */
+    if (mydata->chan.dist <= COLLISION_DIST) {
+        if (src < kilo_uid)
+            MOVE_LEFT();
+        else
+            MOVE_STOP();
+        mywsc->move_tick = kilo_ticks + (3 + rand() % 10) * KILO_TICKS_PER_SEC;
+        TRACE_APP("AVOID COLLISION (%s)!!!!\n",
+                (mywsc->move == MOVING_LEFT) ? "left" : "stop");
+        res = 1;
+    }
+    return res;
+}
+
 
 
 static void update_hunter(uint8_t src, uint8_t dist, uint8_t force)
@@ -216,15 +242,39 @@ void wsc_loop(void)
 
     /* Fetch a message (target silently ignores messages) */
     if (wsc_recv(&src, &pdu) == 0 && mydata->uid != mywsc->target) {
-        /* Eventually refresh the distance aging timer */
-        if (src == mywsc->dist_src)
-            mywsc->aging_tick = kilo_ticks + 5 * KILO_TICKS_PER_SEC;
         /*
          * Distance from target is computed as the one transported within
          * the message plus the distance detected at channel level.
          */
         dist = ((uint16_t)pdu.dis + mydata->chan.dist < DIST_MAX) ?
                 pdu.dis + mydata->chan.dist : DIST_MAX;
+
+        if (mydata->uid == mywsc->target && mydata->chan.dist <= DIST_MIN) {
+            TRACE(">>> CATCHED <<<\n");
+            mywsc->match_cnt++;
+            mywsc->target = src;
+            mywsc->dist = mydata->chan.dist;
+            mywsc->dist_src = src;
+            /* Give him some time to escape */
+            mywsc->echo_tick = kilo_ticks + ESCAPE_TIME_TICKS;
+            return;
+        }
+
+        /* Safety first */
+        if (mywsc->target != src && mywsc->state == WSC_STATE_ACTIVE) {
+            if (collision_avoid(src) != 0)
+                return; /* Imminent collision... Nothing to do */
+        }
+
+        /* Ignore messages of other groups */
+        if (pdu.gid != mydata->gid) {
+            TRACE("IGNORE other group\n");
+            return;
+        }
+
+        /* Eventually refresh the distance aging timer */
+        if (src == mywsc->dist_src)
+            mywsc->aging_tick = kilo_ticks + 5 * KILO_TICKS_PER_SEC;
 
         switch (mywsc->state) {
         case WSC_STATE_IDLE:
