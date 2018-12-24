@@ -6,11 +6,8 @@
 
 #define mywsc (&mydata->wsc)
 
-#define DIST_MIN     40
-#define DIST_MAX     0xFF
-
-#define BLINK_MIN    10
-#define BLINK_MAX    300
+#define DIST_MAX    255
+#define DIST_MIN    40
 
 #define AGING_PERIOD_SECONDS    3
 #define ECHO_PERIOD_SECONDS     1
@@ -18,9 +15,14 @@
 #define AGING_PERIOD_TICKS      (AGING_PERIOD_SECONDS * KILO_TICKS_PER_SEC)
 #define ECHO_PERIOD_TICKS       (ECHO_PERIOD_SECONDS * KILO_TICKS_PER_SEC)
 
-#define ENV_DYN_QUANTITY        10
+#define AGING_QUANTITY          10
 
-#define COLLISION_DIST  (DIST_MIN + 10)
+#define COLLISION_DIST          DIST_MIN
+
+/* Time to take a U turn */
+#define UTURN_SECONDS           15
+#define UTURN_TICKS             (UTURN_SECONDS * KILO_TICKS_PER_SEC)
+
 
 #define MOVING_STOP     0
 #define MOVING_FRONT    1
@@ -55,10 +57,7 @@ struct wsc_pdu {
     uint8_t dis;    /* Distance */
 };
 
-void print_dist(void)
-{
-    TRACE_APP("DIST: %u\n", mywsc->dist);
-}
+
 
 static int wsc_send(uint8_t dst, struct wsc_pdu *pdu)
 {
@@ -98,19 +97,6 @@ static int update_send(void)
 }
 
 
-
-#define UTURN_TIME                  15
-#define UTURN_TICKS                 (UTURN_TIME * KILO_TICKS_PER_SEC)
-
-
-#define RAND_TURN() do { \
-    if (rand() % 2 == 0) \
-        MOVE_LEFT(); \
-    else \
-        MOVE_STOP(); \
-} while (0)
-
-
 static void update_hunter(uint8_t src, uint8_t dist, uint8_t force)
 {
     uint8_t prev_dist = mywsc->dist;
@@ -135,7 +121,6 @@ static void update_hunter(uint8_t src, uint8_t dist, uint8_t force)
         else
             MOVE_STOP();
         mywsc->move_tick = kilo_ticks + (3 + rand() % 10) * KILO_TICKS_PER_SEC;
-        //mywsc->sstate = SUBSTATE_AVOID_COLLISION;
         TRACE_APP("AVOID COLLISION (%s)!!!!\n",
                 (mywsc->move == MOVING_LEFT) ? "left" : "stop");
         return;
@@ -187,8 +172,8 @@ static void active_hunter(void)
         uint8_t dist;
 
         mywsc->aging_tick = kilo_ticks + AGING_PERIOD_TICKS;
-        dist = ((uint16_t)mywsc->dist + ENV_DYN_QUANTITY < DIST_MAX) ?
-                mywsc->dist + ENV_DYN_QUANTITY : DIST_MAX;
+        dist = ((uint16_t)mywsc->dist + AGING_QUANTITY < DIST_MAX) ?
+                mywsc->dist + AGING_QUANTITY : DIST_MAX;
         update_hunter(mywsc->dist_src, dist, 1);
     }
 }
