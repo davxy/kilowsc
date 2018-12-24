@@ -6,17 +6,17 @@
 
 #define mywsc (&mydata->wsc)
 
-#define DIST_MIN        40
-#define DIST_MAX        0xFF
+#define DIST_MIN     40
+#define DIST_MAX     0xFF
 
-#define BLINK_MIN       10
-#define BLINK_MAX       300
+#define BLINK_MIN    10
+#define BLINK_MAX    300
 
-#define ENV_DYN_PERIOD          3
-#define ECHO_PERIOD             1
+#define AGING_PERIOD_SECONDS    3
+#define ECHO_PERIOD_SECONDS     1
 
-#define ENV_DYN_PERIOD_TICKS    (ENV_DYN_PERIOD * KILO_TICKS_PER_SEC)
-#define ECHO_PERIOD_TICKS       (ECHO_PERIOD * KILO_TICKS_PER_SEC)
+#define AGING_PERIOD_TICKS      (AGING_PERIOD_SECONDS * KILO_TICKS_PER_SEC)
+#define ECHO_PERIOD_TICKS       (ECHO_PERIOD_SECONDS * KILO_TICKS_PER_SEC)
 
 #define ENV_DYN_QUANTITY        10
 
@@ -48,38 +48,56 @@
 } while (0)
 
 
+struct wsc_pdu {
+    uint8_t gid;    /* Group identifier */
+    uint8_t mch;    /* Match counter */
+    uint8_t tar;    /* Target id */
+    uint8_t dis;    /* Distance */
+};
+
 void print_dist(void)
 {
     TRACE_APP("DIST: %u\n", mywsc->dist);
 }
 
-int wsc_send(void)
+static int wsc_send(uint8_t dst, struct wsc_pdu *pdu)
 {
-    uint8_t data[2];
+    uint8_t data[4];
 
-    data[0] = mywsc->target;
-    data[1] = mywsc->dist;
-    return chan_send(BROADCAST_ADDR, data, 2);
+    data[0] = pdu->gid;
+    data[1] = pdu->mch;
+    data[2] = pdu->tar;
+    data[3] = pdu->dis;
+    return chan_send(dst, data, sizeof(data));
 }
 
-int wsc_recv(uint8_t *src, uint8_t *col, uint8_t *dist)
+static int wsc_recv(uint8_t *src, struct wsc_pdu *pdu)
 {
     int res;
-    uint8_t data[2];
-    uint8_t len = 2;
+    uint8_t data[4];
+    uint8_t len = sizeof(data);
 
     if ((res = chan_recv(src, data, &len)) == 0) {
-        *col = data[0];
-        *dist = data[1];
+        pdu->gid = data[0];
+        pdu->mch = data[1];
+        pdu->tar = data[2];
+        pdu->dis = data[3];
     }
     return res;
 }
 
+static int update_send(void)
+{
+    struct wsc_pdu pdu;
 
-#define SUBSTATE_HUNTING            0
-#define SUBSTATE_AVOID_COLLISION    1
-#define SUBSTATE_FINISH             2
-#define SUBSTATE_APPROACHING        3
+    pdu.gid = mydata->gid;
+    pdu.mch = mywsc->match_cnt;
+    pdu.tar = mywsc->target;
+    pdu.dis = mywsc->dist;
+    return wsc_send(BROADCAST_ADDR, &pdu);
+}
+
+
 
 #define UTURN_TIME                  15
 #define UTURN_TICKS                 (UTURN_TIME * KILO_TICKS_PER_SEC)
@@ -101,7 +119,7 @@ static void update_hunter(uint8_t src, uint8_t dist, uint8_t force)
     if (force == 1 || dist < prev_dist) {
         mywsc->dist = dist;
         mywsc->dist_src = src;
-        mywsc->aging_tick = kilo_ticks + ENV_DYN_PERIOD_TICKS;
+        mywsc->aging_tick = kilo_ticks + AGING_PERIOD_TICKS;
         TRACE_APP("DISTANCE: %u\n", mywsc->dist);
     }
 
@@ -151,10 +169,6 @@ static void update_hunter(uint8_t src, uint8_t dist, uint8_t force)
     }
 }
 
-
-#define M   (((float)BLINK_MAX - BLINK_MIN) / (DIST_MAX - DIST_MIN))
-#define MX1 (M * DIST_MIN)
-
 static void blink(void)
 {
     if ((mywsc->flags & WSC_FLAG_COLOR_ON) != 0) {
@@ -172,7 +186,7 @@ static void active_hunter(void)
     if (mywsc->aging_tick < kilo_ticks) {
         uint8_t dist;
 
-        mywsc->aging_tick = kilo_ticks + ENV_DYN_PERIOD_TICKS;
+        mywsc->aging_tick = kilo_ticks + AGING_PERIOD_TICKS;
         dist = ((uint16_t)mywsc->dist + ENV_DYN_QUANTITY < DIST_MAX) ?
                 mywsc->dist + ENV_DYN_QUANTITY : DIST_MAX;
         update_hunter(mywsc->dist_src, dist, 1);
@@ -185,32 +199,29 @@ static void active_target(void)
     MOVE_STOP();
 }
 
-static void idle(uint8_t src, uint8_t col, uint8_t dist)
+static void idle(uint8_t src, uint8_t target, uint8_t dist)
 {
-    mywsc->target = col;
-    //mywsc->dist = dist;
-    //mywsc->dist_src = src;
+    mywsc->target = target;
     mywsc->state = WSC_STATE_ACTIVE;
     update_hunter(src, dist, 1);
-    //wsc_send();
 }
 
 static void spontaneous(void)
 {
+    ASSERT(mydata->nodes != 0);
     mywsc->target = rand() % mydata->nodes;
-    if (mywsc->target == mydata->uid)
-        mywsc->target = (mywsc->target + 1) % mydata->nodes;
     mywsc->state = WSC_STATE_ACTIVE;
     mywsc->dist = (mywsc->target != mydata->uid) ? DIST_MAX : 0;
     mywsc->dist_src = kilo_uid;
     TRACE_APP("WSC: %u\n", mywsc->target);
-    wsc_send();
+    update_send();
 }
 
 
 void wsc_loop(void)
 {
-    uint8_t col, dist, src;
+    uint8_t dist, src;
+    struct wsc_pdu pdu;
 
     /* spontaneous event for the root */
     if (mywsc->state == WSC_STATE_IDLE && mydata->uid == mydata->neighbors[0]) {
@@ -218,21 +229,21 @@ void wsc_loop(void)
         return;
     }
 
-    /* Fetch a message (target drops them) */
-    if (wsc_recv(&src, &col, &dist) == 0 && mydata->uid != mywsc->target) {
-        /* Eventually refresh the env dynamics timer */
+    /* Fetch a message (target silently ignores messages) */
+    if (wsc_recv(&src, &pdu) == 0 && mydata->uid != mywsc->target) {
+        /* Eventually refresh the distance aging timer */
         if (src == mywsc->dist_src)
             mywsc->aging_tick = kilo_ticks + 5 * KILO_TICKS_PER_SEC;
         /*
          * Distance from target is computed as the one transported within
          * the message plus the distance detected at channel level.
          */
-        dist = ((uint16_t)dist + mydata->chan.dist < DIST_MAX) ?
-                dist + mydata->chan.dist : DIST_MAX;
+        dist = ((uint16_t)pdu.dis + mydata->chan.dist < DIST_MAX) ?
+                pdu.dis + mydata->chan.dist : DIST_MAX;
 
         switch (mywsc->state) {
         case WSC_STATE_IDLE:
-            idle(src, col, dist);
+            idle(src, pdu.tar, dist);
             break;
         case WSC_STATE_ACTIVE:
             update_hunter(src, dist, 0);
@@ -248,13 +259,12 @@ void wsc_loop(void)
             mywsc->echo_tick = kilo_ticks + ECHO_PERIOD_TICKS;
             if (mywsc->target == mydata->uid)
                 blink();
-            wsc_send();
+            update_send();
         }
         if (mywsc->target != mydata->uid)
             active_hunter();
         else
             active_target();
-        /* Message */
     }
 }
 

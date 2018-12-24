@@ -15,7 +15,7 @@
 
 /**Protocol context */
 struct wsc_ctx {
-    uint32_t aging_tick;    /** Used to increment the current dist. */
+    uint32_t aging_tick;    /** Distance aging tick value. */
     uint32_t echo_tick;     /** Used to periodically transmit current dist. */
     uint32_t move_tick;
     uint32_t blink_tick;
@@ -26,6 +26,7 @@ struct wsc_ctx {
     uint8_t  dist;
     uint8_t  dist_src;
     uint8_t  move;
+    uint8_t  match_cnt;
 };
 
 /** Protocol initialization */
