@@ -32,6 +32,7 @@ static void loop(void)
             mydata->nneighbors = mydata->spt.nchilds + 1;
             if (mydata->uid == mydata->neighbors[0])
                 TRACE_APP(">>> Group players: %u\n", mydata->nodes);
+            mydata->gid = (uint8_t)mydata->spt.root;
             wsc_init();
         }
         break;
@@ -56,12 +57,13 @@ static void setup(void)
     memset(mydata, 0, sizeof(*mydata));
 
     mydata->uid = kilo_uid;
-    mydata->gid = BROADCAST_ADDR;
 
 #ifndef SKIP_ELECTION
+    mydata->gid = BROADCAST_ADDR;
     mydata->proto = APP_PROTO_DIS;
     discover_init();
 #else
+    mydata->gid = 0;
     mydata->proto = APP_PROTO_WSC;
     mydata->nodes = 1; /* Prevents div by zero */
     mydata->neighbors[0] =(kilo_uid == 0) ? kilo_uid : BROADCAST_ADDR;
