@@ -30,9 +30,8 @@ static void loop(void)
             memcpy(mydata->neighbors + 1, mydata->spt.childs,
                    mydata->spt.nchilds * sizeof(mydata->neighbors[0]));
             mydata->nneighbors = mydata->spt.nchilds + 1;
-            if (kilo_uid == mydata->neighbors[0])
-                TRACE_APP(">>> LEADER\n");
-            TRACE_APP("Players: %u\n", mydata->nodes);
+            if (mydata->uid == mydata->neighbors[0])
+                TRACE_APP(">>> Group players: %u\n", mydata->nodes);
             wsc_init();
         }
         break;

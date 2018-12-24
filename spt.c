@@ -246,9 +246,6 @@ static void active(struct spt_pdu *pdu, addr_t src)
             term_res(1);
         }
         break;
-    case PDU_TYPE_TERM_RES:
-        ASSERT(0); /* Should never happen */
-        break;
     default:
         break;
     }

@@ -157,7 +157,7 @@ static void update_hunter(uint8_t src, uint8_t dist, uint8_t force)
 
 static void blink(void)
 {
-    if ((mywsc->flags & WSC_FLAG_COLOR_ON) && mywsc->dist != DIST_MAX) {
+    if ((mywsc->flags & WSC_FLAG_COLOR_ON) != 0) {
         COLOR_APP(WHITE);
         mywsc->flags &= ~WSC_FLAG_COLOR_ON;
     } else {
@@ -182,7 +182,7 @@ static void active_hunter(void)
 static void active_target(void)
 {
     /* Movement strategy */
-
+    MOVE_STOP();
 }
 
 static void idle(uint8_t src, uint8_t col, uint8_t dist)
@@ -213,7 +213,7 @@ void wsc_loop(void)
     uint8_t col, dist, src;
 
     /* spontaneous event for the root */
-    if (mywsc->state == WSC_STATE_IDLE && kilo_uid == mydata->neighbors[0]) {
+    if (mywsc->state == WSC_STATE_IDLE && mydata->uid == mydata->neighbors[0]) {
         spontaneous();
         return;
     }
@@ -250,7 +250,7 @@ void wsc_loop(void)
                 blink();
             wsc_send();
         }
-        if (mydata->uid != mywsc->target)
+        if (mywsc->target != mydata->uid)
             active_hunter();
         else
             active_target();
@@ -263,5 +263,6 @@ void wsc_init(void)
     memset(mywsc, 0, sizeof(*mywsc));
     mywsc->dist =  DIST_MAX;
     mywsc->dist_src = mydata->uid;
+    mywsc->target = BROADCAST_ADDR;
     COLOR_APP(mydata->uid);
 }
