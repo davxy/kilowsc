@@ -17,9 +17,9 @@
 #define ECHO_PERIOD_TICKS       (ECHO_PERIOD_SECONDS * KILO_TICKS_PER_SEC)
 #define ESCAPE_TIME_TICKS       (ESCAPE_TIME_SECONDS * KILO_TICKS_PER_SEC)
 
-#define AGING_QUANTITY          10
+#define AGING_QUANTITY          30
 
-#define COLLISION_DIST          DIST_MIN
+#define COLLISION_DIST          (DIST_MIN + 20)
 
 /* Time to take a U turn */
 #define UTURN_SECONDS           15
@@ -155,13 +155,14 @@ static void update_hunter(uint8_t src, uint8_t dist, uint8_t force)
             TRACE_APP("HUNTING\n");
         }
         mywsc->flags &= ~WSC_FLAG_APPROACH;
-    } else if ((dist < prev_dist && (prev_dist - dist) > 3)
-            || mywsc->move_tick < kilo_ticks) {
+    } else if ((dist < prev_dist /*&& (prev_dist - dist) > 3*/)
+            /*|| mywsc->move_tick < kilo_ticks*/) {
         MOVE_FRONT();
         mywsc->flags |= WSC_FLAG_APPROACH;
         TRACE_APP("APPROACHING to %u\n", src);
     }
-    TRACE_APP("DISTANCE: %u\n", mywsc->dist);
+    TRACE_APP("STAT: gid=%u, tar=%u, mch=%u, dis=: %u\n",
+            mydata->gid, mywsc->target, mywsc->match_cnt, mywsc->dist);
 }
 
 static void blink(void)
@@ -200,11 +201,24 @@ static void spontaneous(void)
     mywsc->target = rand() % mydata->nodes;
     mywsc->state = WSC_STATE_ACTIVE;
     mywsc->dist = (mywsc->target != mydata->uid) ? DIST_MAX : 0;
-    mywsc->dist_src = kilo_uid;
+    mywsc->dist_src = mydata->uid;
     TRACE_APP("WSC: %u\n", mywsc->target);
     update_send();
 }
 
+static void wsc_match(addr_t target)
+{
+    mywsc->match_cnt++;
+    mywsc->target = target;
+    mywsc->dist = mydata->chan.dist;
+    mywsc->dist_src = target;
+    TRACE_APP("WSC: %u\n", mywsc->target);
+    /* Give him some time to escape */
+    mywsc->echo_tick = kilo_ticks + ESCAPE_TIME_TICKS;
+    mywsc->move_tick = kilo_ticks + ESCAPE_TIME_TICKS;
+    MOVE_RIGHT();
+    COLOR_APP(mydata->uid);
+}
 
 void wsc_loop(void)
 {
@@ -221,12 +235,7 @@ void wsc_loop(void)
     if (wsc_recv(&src, &pdu) == 0) {
         if (mydata->uid == mywsc->target && mydata->chan.dist <= DIST_MIN) {
             TRACE(">>> CATCHED <<<\n");
-            mywsc->match_cnt++;
-            mywsc->target = src;
-            mywsc->dist = mydata->chan.dist;
-            mywsc->dist_src = src;
-            /* Give him some time to escape */
-            mywsc->echo_tick = kilo_ticks + ESCAPE_TIME_TICKS;
+            wsc_match(src);
             return;
         }
 
