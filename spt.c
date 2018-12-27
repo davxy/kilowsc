@@ -59,22 +59,45 @@ struct spt_pdu {
 static int pdu_send(struct spt_pdu *pdu, addr_t dst)
 {
     uint8_t data[APDU_SIZE];
+    uint8_t size = 1;
 
     data[0] = pdu->type;
-    data[1] = pdu->root;
-    return chan_send(dst, data, APDU_SIZE);
+    if (pdu->type != PDU_TYPE_TERM_REQ && pdu->type != PDU_TYPE_TERM_RES) {
+        data[1] = pdu->root;
+        size++;
+    }
+    return chan_send(dst, data, size);
 }
 
 static int pdu_recv(struct spt_pdu *pdu, addr_t *src)
 {
     uint8_t data[APDU_SIZE];
     uint8_t siz = APDU_SIZE;
+    int res = 0;
 
-    if (chan_recv(src, data, &siz) < 0 || siz != APDU_SIZE)
-        return -1;
+    if ((res = chan_recv(src, data, &siz)) < 0)
+        return res;
+
     pdu->type = data[0];
-    pdu->root = data[1];
-    return 0;
+    switch (pdu->type) {
+    case PDU_TYPE_Q:
+    case PDU_TYPE_YES:
+    case PDU_TYPE_CHECK:
+        if (siz != 2)
+            res = -1;
+        pdu->root = data[1];
+        break;
+    case PDU_TYPE_TERM_REQ:
+    case PDU_TYPE_TERM_RES:
+        if (siz != 1)
+            res = -1;
+        pdu->root = BROADCAST_ADDR; /* Not used */
+        break;
+    default:
+        res = -1;
+        break;
+    }
+    return res;
 }
 
 /*
@@ -87,14 +110,8 @@ static int pdu_recv(struct spt_pdu *pdu, addr_t *src)
  * after a random number of seconds.
  */
 
-#if 1
 #define SPT_RAND_INIT_OFF \
         (3 * KILO_TICKS_PER_SEC + (rand() % (15 * KILO_TICKS_PER_SEC)))
-#else
-#define SPT_RAND_INIT_OFF \
-        (3 * KILO_TICKS_PER_SEC)
-#endif
-
 
 static void child_add(addr_t id)
 {
@@ -111,13 +128,12 @@ static void child_add(addr_t id)
     }
 }
 
-static void term_res(uint8_t num)
+static void term_res(void)
 {
     struct spt_pdu pdu;
 
-    TRACE_APP("TX TERM-RES <dst=%u ,num=%u>\n", myspt->parent, num);
+    TRACE_APP("TX TERM-RES <dst=%u>\n", myspt->parent);
     pdu.type = PDU_TYPE_TERM_RES;
-    pdu.root = num;
     pdu_send(&pdu, myspt->parent);
 }
 
@@ -126,23 +142,21 @@ static void try_term(void)
     struct spt_pdu pdu;
 
     if (myspt->root == kilo_uid) {
-        TRACE_APP("ROOT FOUND send term to (%u) childs\n", myspt->nchilds);
+        TRACE_APP("ROOT FOUND send TERM to (%u) childs\n", myspt->nchilds);
         COLOR_APP(BLUE);
         ASSERT(myspt->notify_num == 0);
         myspt->notify_num = myspt->nchilds;
         myspt->notify_skp = BROADCAST_ADDR; /* nothing to skip */
         myspt->state = SPT_STATE_TERM;
         myspt->checks = 0; /* use checks to count received childs res */
-        myspt->counter = 1;
     } else {
         pdu.root = myspt->root;
         pdu.type = PDU_TYPE_CHECK;
         /* Check departs from leafs */
         ASSERT(myspt->parent != kilo_uid);
         TRACE_APP("TX CHECK <dst=%u ,root=%u>\n", myspt->parent, myspt->root);
-        if (pdu_send(&pdu, myspt->parent) < 0) {
+        if (pdu_send(&pdu, myspt->parent) < 0)
             ASSERT(0);
-        }
         COLOR_APP(RGB(0,1,0));
     }
 }
@@ -195,8 +209,6 @@ static void construct(addr_t src, addr_t root)
     }
 }
 
-
-
 static void active(struct spt_pdu *pdu, addr_t src)
 {
     switch (pdu->type) {
@@ -229,21 +241,20 @@ static void active(struct spt_pdu *pdu, addr_t src)
         }
         break;
     case PDU_TYPE_TERM_REQ:
-        TRACE_APP("RX TERM-REQ <src=%u ,root=%u>\n", src, pdu->root);
+        TRACE_APP("RX TERM-REQ <src=%u>\n", src);
         ASSERT(myspt->notify_num == 0);
         if (myspt->nchilds > 0) {
             COLOR_APP(BLUE);
-            TRACE_APP("send term to (%u) childs\n", myspt->nchilds);
+            TRACE_APP("TERM to (%u) childs\n", myspt->nchilds);
             myspt->notify_num = myspt->nchilds;
             myspt->notify_skp = BROADCAST_ADDR; /* nothing to skip */
             myspt->state = SPT_STATE_TERM;
             myspt->checks = 0; /* use checks to count received childs res */
-            myspt->counter = 1;
         } else {
-            TRACE_APP("DONE (subtree-size: 1)\n");
+            TRACE_APP("DONE\n");
             myspt->state = SPT_STATE_DONE;
             COLOR_APP(GREEN);
-            term_res(1);
+            term_res();
         }
         break;
     default:
@@ -308,13 +319,13 @@ next:
         goto next;
 
     if (myspt->state == SPT_STATE_TERM) {
-        TRACE_APP("TX TERM <dst=%u ,root=%u>\n", dst, myspt->root);
+        TRACE_APP("TX TERM-REQ <dst=%u>\n", dst);
         pdu.type = PDU_TYPE_TERM_REQ;
     } else {
         TRACE_APP("TX Q <dst=%u ,root=%u>\n", dst, myspt->root);
         pdu.type = PDU_TYPE_Q;
+        pdu.root = myspt->root;
     }
-    pdu.root = myspt->root;
     if (pdu_send(&pdu, dst) < 0) {
         myspt->notify_num++;
         myspt->start = kilo_ticks + 5 * KILO_TICKS_PER_SEC;
@@ -352,15 +363,14 @@ void spt_loop(void)
         break;
     case SPT_STATE_TERM:
         if (pdu.type == PDU_TYPE_TERM_RES) {
-            TRACE_APP("RX TERM-RES <src=%u, num=%u>\n", src, pdu.root);
+            TRACE_APP("RX TERM-RES <src=%u>\n", src);
             myspt->checks++;
-            myspt->counter += pdu.root;
             if (myspt->checks == myspt->nchilds) {
-                TRACE_APP("DONE (subtree-size: %u)\n", myspt->counter);
+                TRACE_APP("DONE\n");
                 myspt->state = SPT_STATE_DONE;
                 COLOR_APP(GREEN);
-                if (kilo_uid != myspt->root)
-                    term_res(myspt->counter);
+                if (mydata->uid != myspt->root)
+                    term_res();
             }
         }
         break;
