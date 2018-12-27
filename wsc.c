@@ -196,8 +196,6 @@ static void active_target(void)
 
 static void spontaneous(void)
 {
-
-    ASSERT(mydata->nodes != 0);
     mywsc->target = BROADCAST_ADDR;
     mywsc->state = WSC_STATE_ACTIVE;
     mywsc->dist = DIST_MAX;
@@ -213,7 +211,6 @@ static void wsc_match(addr_t target)
     mywsc->target = target;
     mywsc->dist = mydata->chan.dist;
     mywsc->dist_src = target;
-    TRACE_APP("WSC: %u\n", mywsc->target);
     /* Give him some time to escape */
     mywsc->echo_tick = kilo_ticks + ESCAPE_TIME_TICKS;
     mywsc->move_tick = kilo_ticks + ESCAPE_TIME_TICKS;
@@ -226,8 +223,8 @@ void wsc_loop(void)
     uint8_t dist, src;
     struct wsc_pdu pdu;
 
-    /* spontaneous event for the root */
-    if (mywsc->state == WSC_STATE_IDLE && mydata->uid == mydata->neighbors[0]) {
+    /* spontaneous event for the group leader */
+    if (mywsc->state == WSC_STATE_IDLE && mydata->uid == mydata->gid) {
         spontaneous();
         return;
     }
@@ -236,9 +233,11 @@ void wsc_loop(void)
     if (wsc_recv(&src, &pdu) == 0) {
 
         if (pdu.tar == BROADCAST_ADDR) {
-            if (mydata->nneighbors > 1)
+            if (mydata->nneighbors != 1)
                 spontaneous();
             else {
+                /* Leaf */
+                TRACE_APP("TARGET");
                 mywsc->target = mydata->uid;
                 mywsc->dist = 0;
                 mywsc->dist_src = mydata->uid;

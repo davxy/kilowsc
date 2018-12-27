@@ -24,15 +24,12 @@ static void loop(void)
     case APP_PROTO_SPT:
         spt_loop();
         if (mydata->spt.state == SPT_STATE_DONE) {
+            mydata->gid = (uint8_t)mydata->spt.root;
             mydata->proto = APP_PROTO_WSC;
-            mydata->nodes = mydata->spt.counter;
             mydata->neighbors[0] = mydata->spt.parent;
             memcpy(mydata->neighbors + 1, mydata->spt.childs,
                    mydata->spt.nchilds * sizeof(mydata->neighbors[0]));
             mydata->nneighbors = mydata->spt.nchilds + 1;
-            if (mydata->uid == mydata->neighbors[0])
-                TRACE_APP(">>> Group players: %u\n", mydata->nodes);
-            mydata->gid = (uint8_t)mydata->spt.root;
             wsc_init();
         }
         break;
@@ -63,11 +60,21 @@ static void setup(void)
     mydata->proto = APP_PROTO_DIS;
     discover_init();
 #else
-    mydata->gid = 0;
-    mydata->proto = APP_PROTO_WSC;
-    mydata->nodes = 1; /* Prevents div by zero */
-    mydata->neighbors[0] =(kilo_uid == 0) ? kilo_uid : BROADCAST_ADDR;
     wsc_init();
+    mydata->gid = DEFAULT_WSC_GID;
+    mydata->proto = APP_PROTO_WSC;
+    if (mydata->uid == mydata->gid) {
+        /*
+         * Hack to let the wsc work as expected.
+         * The kilobot with uid equal to DEFAULT_WSC_GID will be both the
+         * first witch and the target.
+         */
+        mydata->nneighbors = 1;
+        mydata->neighbors[0] = mydata->uid;
+        mydata->wsc.dist = 0;
+    }
+    mydata->wsc.target = DEFAULT_WSC_GID;
+    mydata->wsc.state  = WSC_STATE_ACTIVE;
 #endif
 }
 
