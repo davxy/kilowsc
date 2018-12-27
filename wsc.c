@@ -87,7 +87,7 @@ static int wsc_recv(uint8_t *src, struct wsc_pdu *pdu)
     return res;
 }
 
-static int update_send(void)
+static int update_send(addr_t dst)
 {
     struct wsc_pdu pdu;
 
@@ -95,7 +95,7 @@ static int update_send(void)
     pdu.mch = mywsc->match_cnt;
     pdu.tar = mywsc->target;
     pdu.dis = mywsc->dist;
-    return wsc_send(BROADCAST_ADDR, &pdu);
+    return wsc_send(dst, &pdu);
 }
 
 /* Returns 1 if imminent collision has been detected */
@@ -161,8 +161,7 @@ static void update_hunter(uint8_t src, uint8_t dist, uint8_t force)
         mywsc->flags |= WSC_FLAG_APPROACH;
         TRACE_APP("APPROACHING to %u\n", src);
     }
-    TRACE_APP("STAT: gid=%u, tar=%u, mch=%u, dis=: %u\n",
-            mydata->gid, mywsc->target, mywsc->match_cnt, mywsc->dist);
+
 }
 
 static void blink(void)
@@ -197,13 +196,15 @@ static void active_target(void)
 
 static void spontaneous(void)
 {
+
     ASSERT(mydata->nodes != 0);
-    mywsc->target = rand() % mydata->nodes;
+    mywsc->target = BROADCAST_ADDR;
     mywsc->state = WSC_STATE_ACTIVE;
-    mywsc->dist = (mywsc->target != mydata->uid) ? DIST_MAX : 0;
+    mywsc->dist = DIST_MAX;
     mywsc->dist_src = mydata->uid;
-    TRACE_APP("WSC: %u\n", mywsc->target);
-    update_send();
+    //TRACE_APP("WSC: %u\n", mywsc->target);
+    ASSERT(mydata->nneighbors != 0);
+    update_send(mydata->neighbors[mydata->nneighbors - 1]);
 }
 
 static void wsc_match(addr_t target)
@@ -233,6 +234,21 @@ void wsc_loop(void)
 
     /* Fetch a message (target silently ignores messages) */
     if (wsc_recv(&src, &pdu) == 0) {
+
+        if (pdu.tar == BROADCAST_ADDR) {
+            if (mydata->nneighbors > 1)
+                spontaneous();
+            else {
+                mywsc->target = mydata->uid;
+                mywsc->dist = 0;
+                mywsc->dist_src = mydata->uid;
+                mywsc->state = WSC_STATE_ACTIVE;
+                mywsc->match_cnt++;
+                update_send(BROADCAST_ADDR);
+            }
+            return;
+        }
+
         if (mydata->uid == mywsc->target && mydata->chan.dist <= DIST_MIN) {
             TRACE(">>> CATCHED <<<\n");
             wsc_match(src);
@@ -304,7 +320,9 @@ void wsc_loop(void)
             mywsc->echo_tick = kilo_ticks + ECHO_PERIOD_TICKS;
             if (mywsc->target == mydata->uid)
                 blink();
-            update_send();
+            update_send(BROADCAST_ADDR);
+            TRACE_APP("STAT: gid=%u, tar=%u, mch=%u, dis=: %u\n",
+                    mydata->gid, mywsc->target, mywsc->match_cnt, mywsc->dist);
         }
     }
 }
@@ -315,5 +333,6 @@ void wsc_init(void)
     mywsc->dist =  DIST_MAX;
     mywsc->dist_src = mydata->uid;
     mywsc->target = BROADCAST_ADDR;
+    mydata->chan.timeout_cb = NULL;
     COLOR_APP(mydata->uid);
 }
