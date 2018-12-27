@@ -49,7 +49,7 @@
 #define PDU_TYPE_TERM_REQ   4
 #define PDU_TYPE_TERM_RES   5
 
-#define APDU_SIZE  2
+#define APDU_SIZE_MAX  2
 
 struct spt_pdu {
     uint8_t  type;
@@ -58,7 +58,7 @@ struct spt_pdu {
 
 static int pdu_send(struct spt_pdu *pdu, addr_t dst)
 {
-    uint8_t data[APDU_SIZE];
+    uint8_t data[APDU_SIZE_MAX];
     uint8_t size = 1;
 
     data[0] = pdu->type;
@@ -71,8 +71,8 @@ static int pdu_send(struct spt_pdu *pdu, addr_t dst)
 
 static int pdu_recv(struct spt_pdu *pdu, addr_t *src)
 {
-    uint8_t data[APDU_SIZE];
-    uint8_t siz = APDU_SIZE;
+    uint8_t data[APDU_SIZE_MAX];
+    uint8_t siz = APDU_SIZE_MAX;
     int res = 0;
 
     if ((res = chan_recv(src, data, &siz)) < 0)
@@ -109,13 +109,12 @@ static int pdu_recv(struct spt_pdu *pdu, addr_t *src)
  * The entity starts in IDLE state and will (eventually) switch to ACTIVE
  * after a random number of seconds.
  */
-
 #define SPT_RAND_INIT_OFF \
         (3 * KILO_TICKS_PER_SEC + (rand() % (15 * KILO_TICKS_PER_SEC)))
 
 static void child_add(addr_t id)
 {
-    int i;
+    uint8_t i;
 
     for (i = 0; i < myspt->nchilds; i++) {
         if (myspt->childs[i] == id)
@@ -148,7 +147,7 @@ static void try_term(void)
         myspt->notify_num = myspt->nchilds;
         myspt->notify_skp = BROADCAST_ADDR; /* nothing to skip */
         myspt->state = SPT_STATE_TERM;
-        myspt->checks = 0; /* use checks to count received childs res */
+        myspt->checks = 0; /* received childs term-res */
     } else {
         pdu.root = myspt->root;
         pdu.type = PDU_TYPE_CHECK;
@@ -209,7 +208,7 @@ static void construct(addr_t src, addr_t root)
     }
 }
 
-static void active(struct spt_pdu *pdu, addr_t src)
+static void active_state(struct spt_pdu *pdu, addr_t src)
 {
     switch (pdu->type) {
     case PDU_TYPE_Q:
@@ -249,7 +248,7 @@ static void active(struct spt_pdu *pdu, addr_t src)
             myspt->notify_num = myspt->nchilds;
             myspt->notify_skp = BROADCAST_ADDR; /* nothing to skip */
             myspt->state = SPT_STATE_TERM;
-            myspt->checks = 0; /* use checks to count received childs res */
+            myspt->checks = 0; /* Received childs term-res */
         } else {
             TRACE_APP("DONE\n");
             myspt->state = SPT_STATE_DONE;
@@ -262,12 +261,27 @@ static void active(struct spt_pdu *pdu, addr_t src)
     }
 }
 
-static void idle(struct spt_pdu *pdu, addr_t src)
+static void idle_state(struct spt_pdu *pdu, addr_t src)
 {
     if (pdu->type == PDU_TYPE_Q) {
         TRACE_APP("RX Q <src=%u ,root=%u>\n", src, pdu->root);
         myspt->state = SPT_STATE_ACTIVE;
         construct(src, pdu->root);
+    }
+}
+
+static void term_state(struct spt_pdu *pdu, addr_t src)
+{
+    if (pdu->type == PDU_TYPE_TERM_RES) {
+        TRACE_APP("RX TERM-RES <src=%u>\n", src);
+        myspt->checks++;
+        if (myspt->checks == myspt->nchilds) {
+            TRACE_APP("DONE\n");
+            myspt->state = SPT_STATE_DONE;
+            COLOR_APP(GREEN);
+            if (mydata->uid != myspt->root)
+                term_res();
+        }
     }
 }
 
@@ -298,8 +312,6 @@ static void timeout(addr_t dst, uint8_t *data, uint8_t siz)
     // TODO: remove from neighbor list
     ASSERT(0);
 }
-
-
 
 static void send_pending(void)
 {
@@ -356,23 +368,13 @@ void spt_loop(void)
 
     switch (myspt->state) {
     case SPT_STATE_IDLE:
-        idle(&pdu, src);
+        idle_state(&pdu, src);
         break;
     case SPT_STATE_ACTIVE:
-        active(&pdu, src);
+        active_state(&pdu, src);
         break;
     case SPT_STATE_TERM:
-        if (pdu.type == PDU_TYPE_TERM_RES) {
-            TRACE_APP("RX TERM-RES <src=%u>\n", src);
-            myspt->checks++;
-            if (myspt->checks == myspt->nchilds) {
-                TRACE_APP("DONE\n");
-                myspt->state = SPT_STATE_DONE;
-                COLOR_APP(GREEN);
-                if (mydata->uid != myspt->root)
-                    term_res();
-            }
-        }
+        term_state(&pdu, src);
         break;
     case SPT_STATE_DONE:
         break;
