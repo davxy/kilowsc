@@ -11,7 +11,7 @@
 
 #define AGING_PERIOD_SECONDS    3
 #define ECHO_PERIOD_SECONDS     1
-#define ESCAPE_TIME_SECONDS     5
+#define ESCAPE_TIME_SECONDS     10
 
 #define AGING_PERIOD_TICKS      (AGING_PERIOD_SECONDS * KILO_TICKS_PER_SEC)
 #define ECHO_PERIOD_TICKS       (ECHO_PERIOD_SECONDS * KILO_TICKS_PER_SEC)
@@ -102,21 +102,17 @@ static int update_send(addr_t dst)
 static int collision_avoid(uint8_t src)
 {
     int res = 0;
+    int collision_dist =
 
-    /* FIXME: temporary code... */
-    if (mydata->uid == mywsc->target)
-        return 0;
-
-    /* First collision avoidance (FIXME) */
-    if (mydata->chan.dist <= COLLISION_DIST) {
-        if (src < kilo_uid)
-            MOVE_LEFT();
-        else
+    collision_dist = (mywsc->target != src) ?
+            COLLISION_DIST : (COLLISION_DIST/2);
+    if (mydata->chan.dist <= collision_dist) {
+        if (mydata->uid < src) {
             MOVE_STOP();
-        mywsc->move_tick = kilo_ticks + (3 + rand() % 10) * KILO_TICKS_PER_SEC;
-        TRACE_APP("AVOID COLLISION (%s)!!!!\n",
-                (mywsc->move == MOVING_LEFT) ? "left" : "stop");
-        res = 1;
+            TRACE_APP("AVOID COLLISION!!!!\n");
+            res = 1;
+            mywsc->move_tick = kilo_ticks + (5 + rand() % 10) * KILO_TICKS_PER_SEC;
+        }
     }
     return res;
 }
@@ -130,10 +126,9 @@ static void update_hunter(uint8_t src, uint8_t dist, uint8_t force)
         mywsc->dist = dist;
         mywsc->dist_src = src;
         mywsc->aging_tick = kilo_ticks + AGING_PERIOD_TICKS;
-
     }
 
-    if (dist > prev_dist || dist == DIST_MAX || src == kilo_uid) {
+    if ((dist > prev_dist && dist-prev_dist > 15) || dist == DIST_MAX || src == kilo_uid) {
         /* Distance has increased */
         if ((mywsc->flags & WSC_FLAG_APPROACH) != 0) {
             /* Was approaching */
@@ -147,16 +142,15 @@ static void update_hunter(uint8_t src, uint8_t dist, uint8_t force)
         } else if (mywsc->move_tick < kilo_ticks) {
             if (mywsc->move == MOVING_FRONT) {
                 MOVE_LEFT();
-                mywsc->move_tick = kilo_ticks + 6 * KILO_TICKS_PER_SEC;
+                mywsc->move_tick = kilo_ticks + 8 * KILO_TICKS_PER_SEC;
             } else {
                 MOVE_FRONT();
-                mywsc->move_tick = kilo_ticks + 10 * KILO_TICKS_PER_SEC;
+                mywsc->move_tick = kilo_ticks + 12 * KILO_TICKS_PER_SEC;
             }
             TRACE_APP("HUNTING\n");
         }
         mywsc->flags &= ~WSC_FLAG_APPROACH;
-    } else if ((dist < prev_dist /*&& (prev_dist - dist) > 3*/)
-            /*|| mywsc->move_tick < kilo_ticks*/) {
+    } else if (dist < prev_dist) {
         MOVE_FRONT();
         mywsc->flags |= WSC_FLAG_APPROACH;
         TRACE_APP("APPROACHING to %u\n", src);
@@ -215,14 +209,17 @@ static void wsc_match(addr_t target)
     /* Give him some time to escape */
     mywsc->echo_tick = kilo_ticks + ESCAPE_TIME_TICKS;
     mywsc->move_tick = kilo_ticks + ESCAPE_TIME_TICKS;
-    MOVE_RIGHT();
+    MOVE_STOP();
     COLOR_APP(mydata->uid);
+    update_send(BROADCAST_ADDR);
 }
 
 void wsc_loop(void)
 {
-    uint8_t dist, src;
+    uint8_t dist, prev_dist, src, new_match = 0;
     struct wsc_pdu pdu;
+
+    prev_dist = mywsc->dist;
 
     /* spontaneous event for the group leader */
     if (mywsc->state == WSC_STATE_IDLE && mydata->uid == mydata->gid) {
@@ -234,7 +231,7 @@ void wsc_loop(void)
     if (wsc_recv(&src, &pdu) == 0) {
 
         /* Safety first */
-        if (mywsc->target != src && mywsc->move != MOVING_STOP) {
+        if (mywsc->move != MOVING_STOP) {
             if (collision_avoid(src) != 0)
                 return; /* Imminent collision... Nothing to do */
         }
@@ -293,6 +290,7 @@ void wsc_loop(void)
                 mywsc->match_cnt = pdu.mch;
                 mywsc->target = pdu.tar;
                 mywsc->flags &= ~WSC_FLAG_APPROACH;
+                new_match = 1;
             } else if (mydata->uid != mywsc->target) {
                 update_hunter(src, dist, 0);
             }
@@ -310,7 +308,6 @@ void wsc_loop(void)
         }
     }
 
-    //return;
     /* Active loop */
     if (mywsc->state == WSC_STATE_ACTIVE && mywsc->target != BROADCAST_ADDR) {
         if (mywsc->target != mydata->uid)
@@ -321,7 +318,18 @@ void wsc_loop(void)
             mywsc->echo_tick = kilo_ticks + ECHO_PERIOD_TICKS;
             if (mywsc->target == mydata->uid)
                 blink();
-            update_send(BROADCAST_ADDR);
+            if ((mywsc->dist != DIST_MAX && mywsc->dist <= prev_dist) ||
+                    mywsc->target == mydata->uid || new_match == 1) {
+                update_send(BROADCAST_ADDR);
+            } else {
+                struct wsc_pdu pdu;
+
+                pdu.gid = BROADCAST_ADDR;
+                pdu.mch = mywsc->match_cnt;
+                pdu.tar = mywsc->target;
+                pdu.dis = mywsc->dist;
+                wsc_send(BROADCAST_ADDR, &pdu);
+            }
             TRACE_APP("STAT: gid=%u, tar=%u, mch=%u, dis=: %u\n",
                     mydata->gid, mywsc->target, mywsc->match_cnt, mywsc->dist);
         }
