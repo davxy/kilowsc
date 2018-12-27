@@ -202,7 +202,8 @@ static void spontaneous(void)
     mywsc->dist_src = mydata->uid;
     //TRACE_APP("WSC: %u\n", mywsc->target);
     ASSERT(mydata->nneighbors != 0);
-    update_send(mydata->neighbors[mydata->nneighbors - 1]);
+    TRACE("TARGET SEARCH to %u\n", mydata->neighbors[0]);
+    update_send(mydata->neighbors[0]);
 }
 
 static void wsc_match(addr_t target)
@@ -232,12 +233,25 @@ void wsc_loop(void)
     /* Fetch a message (target silently ignores messages) */
     if (wsc_recv(&src, &pdu) == 0) {
 
-        if (pdu.tar == BROADCAST_ADDR) {
-            if (mydata->nneighbors != 1)
+        /* Safety first */
+        if (mywsc->target != src && mywsc->move != MOVING_STOP) {
+            if (collision_avoid(src) != 0)
+                return; /* Imminent collision... Nothing to do */
+        }
+
+        /* Ignore messages from other groups */
+        if (pdu.gid != mydata->gid) {
+            TRACE("IGNORE other group\n");
+            return;
+        }
+
+        if (pdu.tar == BROADCAST_ADDR && mywsc->target == BROADCAST_ADDR) {
+            if (mydata->nneighbors != 1) {
+                TRACE("TARGET SEARCH from %u\n", src);
                 spontaneous();
-            else {
+            } else {
                 /* Leaf */
-                TRACE_APP("TARGET");
+                TRACE_APP("TARGET\n");
                 mywsc->target = mydata->uid;
                 mywsc->dist = 0;
                 mywsc->dist_src = mydata->uid;
@@ -254,6 +268,10 @@ void wsc_loop(void)
             return;
         }
 
+        /* Eventually refresh the distance aging timer */
+        if (src == mywsc->dist_src)
+            mywsc->aging_tick = kilo_ticks + 5 * KILO_TICKS_PER_SEC;
+
         /*
          * Distance from target is computed as the one transported within
          * the message plus the distance detected at channel level.
@@ -261,34 +279,17 @@ void wsc_loop(void)
         dist = ((uint16_t)pdu.dis + mydata->chan.dist < DIST_MAX) ?
                 pdu.dis + mydata->chan.dist : DIST_MAX;
 
-        /* Safety first */
-        if (mywsc->target != src && mywsc->state == WSC_STATE_ACTIVE) {
-            if (collision_avoid(src) != 0)
-                return; /* Imminent collision... Nothing to do */
-        }
-
-        /* Ignore messages of other groups */
-        if (pdu.gid != mydata->gid) {
-            TRACE("IGNORE other group\n");
-            return;
-        }
-
-        /* Eventually refresh the distance aging timer */
-        if (src == mywsc->dist_src)
-            mywsc->aging_tick = kilo_ticks + 5 * KILO_TICKS_PER_SEC;
-
         if (mywsc->state != WSC_STATE_IDLE) {
             /* Check if a new match is started */
             if (pdu.mch > mywsc->match_cnt) {
                 COLOR_APP(mydata->uid);
                 if (pdu.tar != mydata->uid) {
-                    mywsc->dist = pdu.dis;
+                    mywsc->dist = dist;
                     mywsc->dist_src = src;
                 } else {
                     mywsc->dist = 0;
                     mywsc->dist_src = mydata->uid;
                 }
-                dist = mywsc->dist;
                 mywsc->match_cnt = pdu.mch;
                 mywsc->target = pdu.tar;
                 mywsc->flags &= ~WSC_FLAG_APPROACH;
@@ -300,7 +301,7 @@ void wsc_loop(void)
             mywsc->match_cnt = pdu.mch;
             mywsc->target = pdu.tar;
             if (pdu.tar != mydata->uid) {
-                mywsc->dist = pdu.dis;
+                mywsc->dist = dist;
                 mywsc->dist_src = src;
             } else {
                 mywsc->dist = 0;
@@ -309,8 +310,9 @@ void wsc_loop(void)
         }
     }
 
+    //return;
     /* Active loop */
-    if (mywsc->state == WSC_STATE_ACTIVE) {
+    if (mywsc->state == WSC_STATE_ACTIVE && mywsc->target != BROADCAST_ADDR) {
         if (mywsc->target != mydata->uid)
             active_hunter();
         else

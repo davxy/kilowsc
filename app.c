@@ -26,10 +26,13 @@ static void loop(void)
         if (mydata->spt.state == SPT_STATE_DONE) {
             mydata->gid = (uint8_t)mydata->spt.root;
             mydata->proto = APP_PROTO_WSC;
-            mydata->neighbors[0] = mydata->spt.parent;
-            memcpy(mydata->neighbors + 1, mydata->spt.childs,
-                   mydata->spt.nchilds * sizeof(mydata->neighbors[0]));
-            mydata->nneighbors = mydata->spt.nchilds + 1;
+            mydata->nneighbors = mydata->spt.nchilds;
+            memcpy(mydata->neighbors, mydata->spt.childs,
+                   mydata->spt.nchilds * sizeof(addr_t));
+            if (mydata->uid != mydata->gid) {
+                mydata->neighbors[mydata->nneighbors] = mydata->spt.parent;
+                mydata->nneighbors++;
+            }
             wsc_init();
         }
         break;
