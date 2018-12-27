@@ -111,9 +111,9 @@ static message_t *message_tx(void)
 
     if (buf_read(&mychan->ack_buf, &dst, 1) == 0) {
         flg |= PDU_FLAG_ACK;
-        if (mychan->rx_seq[dst] != 0)
+        if (CHAN_BITMAP_GET(mychan->rx_map, dst) != 0)
             flg |= PDU_FLAG_SEQ;
-        mychan->rx_seq[dst] = 1 - mychan->rx_seq[dst];
+        CHAN_BITMAP_TOGGLE(mychan->rx_map, dst);
         msg = &mychan->msg2;
         msg->type = NORMAL;
         msg->data[0] = kilo_uid;
@@ -135,7 +135,7 @@ static message_t *message_tx(void)
 
     if (dst != BROADCAST_ADDR) {
         flg |= PDU_FLAG_CON;
-        if (mychan->tx_seq[dst] != 0)
+        if (CHAN_BITMAP_GET(mychan->tx_map, dst) != 0)
             flg |= PDU_FLAG_SEQ;
         mychan->state = CHAN_STATE_WAIT_ACK;
     } else {
@@ -188,12 +188,12 @@ static void message_rx(message_t *m, distance_measurement_t *d)
 
             exp_addr = mychan->msg.data[1]; /* read from last sent message */
             if (exp_addr == src) {
-                if (((flg & PDU_FLAG_SEQ) != 0) != mychan->tx_seq[src]) {
+                if (((flg & PDU_FLAG_SEQ) != 0) != CHAN_BITMAP_GET(mychan->tx_map, src)) {
                     TRACE_CHAN("IGNORE DUPLICATE ACK\n");
                     ASSERT(0);  /* Should never happen */
                     return;     /* Wrong ack no */
                 }
-                mychan->tx_seq[src] = 1 ^ mychan->tx_seq[src];
+                CHAN_BITMAP_TOGGLE(mychan->tx_map, src);
                 mychan->state = CHAN_STATE_IDLE; /* Ack received */
                 COLOR_CHAN(WHITE);
             }
@@ -202,10 +202,10 @@ static void message_rx(message_t *m, distance_measurement_t *d)
     }
 
     if ((flg & PDU_FLAG_CON) != 0) {
-        if (((flg & PDU_FLAG_SEQ) != 0) != mychan->rx_seq[src]) {
+        if (((flg & PDU_FLAG_SEQ) != 0) != CHAN_BITMAP_GET(mychan->rx_map, src)) {
             TRACE_CHAN(">>> IGNORE DUPLICATE INFO (send ack)\n");
             /* This change the ack number to the correct one */
-            mychan->rx_seq[src] = 1 - mychan->rx_seq[src];
+            CHAN_BITMAP_TOGGLE(mychan->rx_map, src);
             ack_send(src);
             return;
         }

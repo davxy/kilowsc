@@ -51,6 +51,17 @@ typedef uint8_t addr_t;
 #define CHAN_FLAG_DATAGRAM      0x01
 #define CHAN_FLAG_PROMISC       0x02
 
+#define CHAN_ADDR_MAX           255
+#define CHAN_BITMAP_BYTES       ((CHAN_ADDR_MAX >> 3) + 1)
+typedef uint8_t bitmap_t[CHAN_BITMAP_BYTES];
+#define CHAN_BITMAP_GET(map, bit) \
+        ((map[bit >> 3] & 1 << (bit & 0x7)) != 0)
+#define CHAN_BITMAP_SET(map, bit) \
+        (map[bit >> 3] |= 1 << (bit & 0x07))
+#define CHAN_BITMAP_TOGGLE(map, bit) \
+        (map[bit >> 3] ^= 1 << (bit & 0x07))
+
+
 /* Invoked if no ack is received after all the retries */
 typedef void (* timeout_func)(addr_t dst, uint8_t *data, uint8_t siz);
 
@@ -66,8 +77,8 @@ struct chan_ctx {
     struct buf      rx_buf;
     struct buf      tx_buf;
     struct buf      ack_buf;
-    uint8_t         rx_seq[64]; /* TODO: replace with bitmaps */
-    uint8_t         tx_seq[64];
+    bitmap_t        rx_map;
+    bitmap_t        tx_map;
 };
 
 void chan_init(uint8_t flags, timeout_func timeout_cb);
