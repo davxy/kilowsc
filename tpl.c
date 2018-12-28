@@ -12,10 +12,34 @@
 #define PDU_FLAG_SEQ            0x20
 #define PDU_LEN_MASK            0x07
 
+#ifdef VERBOSE_BUF
+static void buf_stats(void)
+{
+    int print = 0;
+
+    if (mytpl->ack_max < buf_size(&mytpl->ack_buf)) {
+        mytpl->ack_max = buf_size(&mytpl->ack_buf);
+        print = 1;
+    }
+    if (mytpl->rx_max < buf_size(&mytpl->rx_buf)) {
+        mytpl->rx_max = buf_size(&mytpl->rx_buf);
+        print = 1;
+    }
+    if (mytpl->tx_max < buf_size(&mytpl->tx_buf)) {
+        mytpl->tx_max = buf_size(&mytpl->tx_buf);
+        print = 1;
+    }
+    if (print != 0) {
+        TRACE("BUF ack=%u, rx=%u, tx=%u\n",
+                mytpl->ack_max, mytpl->rx_max, mytpl->tx_max);
+    }
+}
+#endif
 
 static int tpl_buf_write(buf_t *buf, addr_t addr,
-                          uint8_t *data, uint8_t size)
+                         uint8_t *data, uint8_t size)
 {
+    int res;
     uint8_t raw[TPL_PDU_MAX];
 
     if (size > TPL_SDU_MAX)
@@ -23,7 +47,11 @@ static int tpl_buf_write(buf_t *buf, addr_t addr,
     raw[0] = addr;
     raw[1] = size;
     memcpy(raw + 2, data, size);
-    return buf_write(buf, raw, size + 2);
+    res = buf_write(buf, raw, size + 2);
+#ifdef VERBOSE_BUF
+    buf_stats();
+#endif
+    return res;
 }
 
 static int tpl_buf_read(buf_t *buf, addr_t *addr,
@@ -273,4 +301,7 @@ void tpl_init(uint8_t flags, timeout_fun timeout_cb)
     kilo_message_tx = message_tx;
     kilo_message_rx = message_rx;
     kilo_message_tx_success = message_tx_success;
+    buf_init(&mytpl->ack_buf, mytpl->ack_raw, TPL_ACK_BUF_SIZE);
+    buf_init(&mytpl->rx_buf,  mytpl->rx_raw,  TPL_RX_BUF_SIZE);
+    buf_init(&mytpl->tx_buf,  mytpl->tx_raw,  TPL_TX_BUF_SIZE);
 }

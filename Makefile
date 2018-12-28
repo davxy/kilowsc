@@ -30,6 +30,10 @@ ifeq ($(VERBOSE_APP),y)
 CFLAGS += -DVERBOSE_APP
 endif
 
+ifeq ($(VERBOSE_BUF),y)
+CFLAGS += -DVERBOSE_BUF
+endif
+
 
 .PHONY: clean all
 

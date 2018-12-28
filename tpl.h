@@ -102,6 +102,21 @@ typedef uint8_t bitmap_t[TPL_BITMAP_BYTES];
 /* Invoked if no ack is received after all the retries */
 typedef void (* timeout_fun)(addr_t dst, uint8_t *data, uint8_t siz);
 
+/**
+ * Buffers raw back-buffers sizes @{
+ *
+ * The following values were empirically deduced using Kilombo simulator with
+ * success rate = 0.9 and 10 kilobots.
+ * For different parameters fine tune by first run the application with
+ * VERBOSE_BUF compilation flag.
+ */
+/** Ack raw buffer size */
+#define TPL_ACK_BUF_SIZE    4
+/** RX raw buffer size */
+#define TPL_RX_BUF_SIZE     32
+/** TX raw buffer size */
+#define TPL_TX_BUF_SIZE     64
+
 /** Transport Protocol Layer context */
 struct tpl_ctx {
     uint8_t         state;      /**< Context state */
@@ -112,11 +127,19 @@ struct tpl_ctx {
     message_t       msg;        /**< Last TX message */
     message_t       msg2;       /**< Spare message used for emergency acks */
     timeout_fun     timeout_cb; /**< Callback for confirmed unicast failures */
+    bitmap_t        rx_map;     /**< RX sequence bitmap */
+    bitmap_t        tx_map;     /**< TX sequence bitmap */
     buf_t           ack_buf;    /**< TX acks buffer */
     buf_t           rx_buf;     /**< RX data buffer */
     buf_t           tx_buf;     /**< TX data buffer */
-    bitmap_t        rx_map;     /**< RX sequence bitmap */
-    bitmap_t        tx_map;     /**< TX sequence bitmap */
+    uint8_t         ack_raw[TPL_ACK_BUF_SIZE];  /**< ACK back buffer */
+    uint8_t         rx_raw[TPL_RX_BUF_SIZE];    /**< RX back buffer */
+    uint8_t         tx_raw[TPL_TX_BUF_SIZE];    /**< TX back buffer */
+#ifdef VERBOSE_BUF
+    uint8_t         rx_max;
+    uint8_t         tx_max;
+    uint8_t         ack_max;
+#endif
 };
 
 /** Transport protocol context type alias */

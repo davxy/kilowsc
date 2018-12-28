@@ -50,11 +50,11 @@ static void setup(void)
     set_motors(0, 0);
     set_color(WHITE);
 
+    /* Application data erase */
+    memset(mydata, 0, sizeof(*mydata));
+
     /* Communication channel init */
     tpl_init(0, NULL);
-
-    /* Application data init */
-    memset(mydata, 0, sizeof(*mydata));
 
     mydata->uid = kilo_uid;
 

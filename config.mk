@@ -21,3 +21,6 @@ VISUAL_APP := y
 
 # Verbose application layer
 VERBOSE_APP := y
+
+# Verbose buffer statistics (used for best effort fine tune raw buffers sizes)
+#VERBOSE_BUF := y
