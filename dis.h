@@ -1,9 +1,13 @@
+/**
+ * Neighbor discovery protocol.
+ *
+ * Best effort neighbors nodes discovery.
+ */
+
 #ifndef DIS_H_
 #define DIS_H_
 
 #include "misc.h"
-
-
 
 /**
  * Discovery protocol state @{
@@ -18,15 +22,18 @@
 
 /** Discovery protocol context */
 struct dis_ctx {
-    uint8_t  state;    /* Current state */
-    uint32_t start;    /* Protocol start time */
-    uint32_t next;     /* Next discovery time */
+    uint8_t  state;     /* Current state */
+    uint32_t start;     /* Protocol start time */
+    uint32_t next;      /* Next discovery time */
+    uint32_t last;      /* Last new detection */
 };
 
 typedef struct dis_ctx dis_ctx_t;
 
+/** Discovery protocol initialization */
 void dis_init(void);
 
+/** Discovery protocol loop */
 void dis_loop(void);
 
 #endif /* DIS_H_ */

@@ -4,11 +4,12 @@
 
 #define mydis (&mydata->dis)
 
-
-#define DIS_TIME          (10 * KILO_TICKS_PER_SEC)
-
-#define DIS_RAND_OFF \
-        (rand() % (3 * KILO_TICKS_PER_SEC))
+/* Minimum time dedicated to the discovery protocol */
+#define DIS_MIN_TIME    (10 * KILO_TICKS_PER_SEC)
+/* Time that should be elapsed without new discoveries before quit */
+#define DIS_QUIET_TIME  (10 * KILO_TICKS_PER_SEC)
+/* Time, in kilo ticks, between discovery messages */
+#define DIS_RAND_OFF    (rand() % (3 * KILO_TICKS_PER_SEC))
 
 
 static void neighbor_print(void)
@@ -17,21 +18,27 @@ static void neighbor_print(void)
 
     TRACE_APP("N(x) = { ");
     for (i = 0; i < mydata->nneigh; i++)
-        TRACE2_APP("P%03u ", mydata->neigh[i]);
+        TRACE2_APP("%u ", mydata->neigh[i]);
     TRACE2_APP("}\n");
 }
 
 static void neighbor_add(addr_t addr)
 {
-    int i;
+    uint8_t i;
 
     for (i = 0; i < mydata->nneigh; i++) {
         if (mydata->neigh[i] == addr)
             break;
     }
     if (i == mydata->nneigh) {
-        mydata->neigh[i] = addr;
-        mydata->nneigh++;
+        if (i < NEIGHBORS_MAX) {
+            mydata->neigh[i] = addr;
+            mydata->nneigh++;
+            mydis->last = kilo_ticks;
+            neighbor_print();
+        } else {
+            TRACE("NEIGHBOR %u ignored, max capacity reached\n", addr);
+        }
     }
 }
 
@@ -44,27 +51,27 @@ void dis_loop(void)
         mydis->next = kilo_ticks + DIS_RAND_OFF;
     }
 
-    if (kilo_ticks >= mydis->start + DIS_TIME) {
+    if (kilo_ticks - mydis->start >= DIS_MIN_TIME &&
+        kilo_ticks - mydis->last >= DIS_QUIET_TIME) {
         mydis->state = DIS_STATE_DONE;
         COLOR_APP(GREEN);
+        TRACE_APP("DISCOVERY DONE\n");
         return;
     }
 
     if (mydis->state == DIS_STATE_IDLE) {
-        /* some rand to try to avoid collisions */
-        if (kilo_ticks > mydis->next) {
+        if (kilo_ticks >= mydis->next) {
             mydis->state = DIS_STATE_ACTIVE;
             COLOR_APP(RED);
             tpl_send(TPL_BROADCAST_ADDR, NULL, 0);
             mydis->next = kilo_ticks + DIS_RAND_OFF;
-            neighbor_print();
         }
     } else {
         mydis->state = DIS_STATE_IDLE;
         COLOR_APP(WHITE);
     }
 
-    if (tpl_recv(&src, NULL, NULL) >= 0)
+    if (tpl_recv(&src, NULL, NULL) == 0)
         neighbor_add(src);
 }
 
