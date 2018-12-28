@@ -72,9 +72,7 @@
 /** Maximum number of tree node children */
 #define SPT_CHILD_MAX       32
 
-/**
- * Spanning tree protocol context.
- */
+/** Spanning Tree protocol context. */
 struct spt_ctx {
     uint32_t    start;      /**< Used for start spontaneous event. */
     uint8_t     state;      /**< Context state. */

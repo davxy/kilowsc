@@ -31,7 +31,7 @@ static void neighbor_add(addr_t addr)
             break;
     }
     if (i == mydata->nneigh) {
-        if (i < NEIGHBORS_MAX) {
+        if (i < APP_NEIGHBORS_MAX) {
             mydata->neigh[i] = addr;
             mydata->nneigh++;
             mydis->last = kilo_ticks;

@@ -7,20 +7,29 @@
 #include "misc.h"
 #include "tpl.h"
 
-#define APP_PROTO_DIS    0   /* Discovery */
-#define APP_PROTO_SPT    1   /* Spanning tree construction */
-#define APP_PROTO_WSC    2   /* Witch Says Color */
+/**
+ * Application protocols. @{
+ */
+/** Neighbor discovery */
+#define APP_PROTO_DIS       0
+/** Spanning tree construction */
+#define APP_PROTO_SPT       1
+/** Witch Says Color */
+#define APP_PROTO_WSC       2
+/** @} */
 
-#define NEIGHBORS_MAX    32
+/** Max number of allowed node neighbors. */
+#define APP_NEIGHBORS_MAX   32
 
-#define DEFAULT_WSC_GID  0
+/** Default group id. Used when the SPT construction is skipped */
+#define APP_DEFAULT_GID     0
 
 /** Application context */
 struct app_ctx {
     addr_t      uid;        /** Node unique identifier */
     addr_t      gid;        /** Node group identifier */
     uint8_t     nneigh;     /** Number of neighbors */
-    addr_t      neigh[NEIGHBORS_MAX];   /** Neighbors array */
+    addr_t      neigh[APP_NEIGHBORS_MAX]; /** Neighbors array */
     uint8_t     proto;      /** Current application protocol */
     tpl_ctx_t   tpl;        /** Transport protocol context */
     union {                 /** Application layer protocols */
@@ -30,10 +39,11 @@ struct app_ctx {
     };
 };
 
+/** Application context type alias. */
 typedef struct app_ctx app_ctx_t;
-
+/** Application context instance pointer. */
 extern struct app_ctx *mydata;
-
+/** Application context instance pointer alias. */
 #define myapp mydata
 
 #endif /* APP_H_ */

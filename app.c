@@ -2,9 +2,10 @@
 #include <string.h>
 #include <time.h>
 
-
+/* Application context data instance */
 REGISTER_USERDATA(app_ctx_t)
 
+/* Application loop */
 static void loop(void)
 {
     switch (mydata->proto) {
@@ -44,7 +45,7 @@ static void loop(void)
     }
 }
 
-
+/* Application initialization */
 static void setup(void)
 {
     set_motors(0, 0);
@@ -64,7 +65,7 @@ static void setup(void)
     mydata->proto = APP_PROTO_DIS;
 #else
     wsc_init();
-    mydata->gid = DEFAULT_WSC_GID;
+    mydata->gid = APP_DEFAULT_GID;
     mydata->proto = APP_PROTO_WSC;
     if (mydata->uid == mydata->gid) {
         /*
@@ -76,7 +77,7 @@ static void setup(void)
         mydata->neigh[0] = mydata->uid;
         mydata->wsc.dist = 0;
     }
-    mydata->wsc.target = DEFAULT_WSC_GID;
+    mydata->wsc.target = APP_DEFAULT_GID;
     mydata->wsc.state  = WSC_STATE_ACTIVE;
 #endif
 }

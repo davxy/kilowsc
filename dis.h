@@ -20,9 +20,7 @@
 #define DIS_STATE_DONE     2
 /** @} */
 
-/**
- * Discovery protocol context.
- */
+/** Discovery protocol context. */
 struct dis_ctx {
     uint8_t  state;     /**< Current state. */
     uint32_t start;     /**< Protocol start time. */
