@@ -11,7 +11,7 @@ static void loop(void)
     case APP_PROTO_DIS:
         dis_loop();
         if (mydata->dis.state == DIS_STATE_DONE) {
-            tpl_flush();
+            tpl_drop();
             if (mydata->nneigh > 0) {
                 mydata->proto = APP_PROTO_SPT;
                 spt_init();

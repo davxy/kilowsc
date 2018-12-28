@@ -6,11 +6,11 @@
 
 #define mytpl  (&mydata->tpl)
 
+/* PDU header flags */
 #define PDU_FLAG_CON            0x80
 #define PDU_FLAG_ACK            0x40
 #define PDU_FLAG_SEQ            0x20
 #define PDU_LEN_MASK            0x07
-
 
 
 static int tpl_buf_write(buf_t *buf, addr_t addr,
@@ -255,7 +255,7 @@ int tpl_recv(addr_t *src, uint8_t *data, uint8_t *size)
     return res;
 }
 
-void tpl_flush(void)
+void tpl_drop(void)
 {
     mytpl->state = TPL_STATE_IDLE;
     buf_flush(&mytpl->ack_buf);

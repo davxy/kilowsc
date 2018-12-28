@@ -28,6 +28,7 @@ struct dis_ctx {
     uint32_t last;      /* Last new detection */
 };
 
+/** Discovery protocol type alias */
 typedef struct dis_ctx dis_ctx_t;
 
 /** Discovery protocol initialization */

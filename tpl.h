@@ -1,10 +1,10 @@
 /*
- * Transport Protocol Layer
+ * Transport Protocol Layer.
  *
  * Implementation of a reliable communication channel above the unreliable
  * infrared kilobot physical layer.
  *
- * Serveces:
+ * Services:
  * - Unicast and Broadcast.
  * - Promiscuous mode.
  * - Datagram service.
@@ -79,21 +79,30 @@ typedef uint8_t addr_t;
 #define TPL_FLAG_PROMISC        0x02
 /** @} */
 
-
+/**
+ * Bitmap data used to keep track of a binary sequence number. @{
+ */
+/** Number of bytes required by the bitmap */
 #define TPL_BITMAP_BYTES       ((TPL_ADDR_MAX >> 3) + 1)
+/** Bitmap type alias */
 typedef uint8_t bitmap_t[TPL_BITMAP_BYTES];
-
+/** Get a bit value (returns 0 or 1). */
 #define TPL_BITMAP_GET(map, bit) \
         ((map[bit >> 3] & 1 << (bit & 0x7)) != 0)
-#define TPL_BITMAP_SET(map, bit) \
-        (map[bit >> 3] |= 1 << (bit & 0x07))
+/** Set a bit value (0 or 1). */
+#define TPL_BITMAP_SET(map, bit, val) \
+        ((val != 0) ? \
+        (map[bit >> 3] |= (1 << (bit & 0x07))) : \
+        (map[bit >> 3] &= ~(1 << (bit & 0x07))))
+/** Invert a bit value */
 #define TPL_BITMAP_TOGGLE(map, bit) \
         (map[bit >> 3] ^= 1 << (bit & 0x07))
-
+/** @} */
 
 /* Invoked if no ack is received after all the retries */
 typedef void (* timeout_fun)(addr_t dst, uint8_t *data, uint8_t siz);
 
+/** Transport Protocol Layer context */
 struct tpl_ctx {
     uint8_t         state;      /** Context state */
     uint8_t         count;      /** Number of TX retries for acked PDUs */
@@ -102,23 +111,57 @@ struct tpl_ctx {
     uint32_t        sent;       /** Last TX message time (kilo_ticks) */
     message_t       msg;        /** Last TX message */
     message_t       msg2;       /** Spare message used for emergency acks */
-    timeout_fun     timeout_cb;
-    buf_t           ack_buf;
-    buf_t           rx_buf;
-    buf_t           tx_buf;
-    bitmap_t        rx_map;
-    bitmap_t        tx_map;
+    timeout_fun     timeout_cb; /** Callback for confirmed unicast failures */
+    buf_t           ack_buf;    /** TX acks buffer */
+    buf_t           rx_buf;     /** RX data buffer */
+    buf_t           tx_buf;     /** TX data buffer */
+    bitmap_t        rx_map;     /** RX sequence bitmap */
+    bitmap_t        tx_map;     /** TX sequence bitmap */
 };
 
+/** Transport protocol context type alias */
 typedef struct tpl_ctx tpl_ctx_t;
 
+/**
+ * Transport protocol initialization.
+ *
+ * @param flags         Context flags.
+ * @param timeout_cb    Callback for confirmed unicast failures.
+ */
 void tpl_init(uint8_t flags, timeout_fun timeout_cb);
 
-void tpl_flush(void);
+/**
+ * Pending messages discard.
+ *
+ * Both received and transmitted messaged that are waiting to be effectively
+ * processed by the upper and lower layer, respectively, are discarded.
+ * The ACK buffer is cleared as well.
+ */
+void tpl_drop(void);
 
+/**
+ * Send application information.
+ *
+ * All or nothing send function.
+ *
+ * @param dst   Destination peer address.
+ * @param data  Data raw buffer pointer.
+ * @param size  Data raw buffer size.
+ * @return      0 on success, -1 on failure.
+ */
 int tpl_send(addr_t dst, uint8_t *data, uint8_t size);
 
+/**
+ * Receive application information.
+ *
+ * The 'size' parameter is used for both input and output.
+ *
+ * @param src   Source peer address.
+ * @param data  Data raw buffer pointer.
+ * @param size  Data raw buffer size.
+ *              On success this is changed to the number of bytes received.
+ * @return      0 on success, -1 on failure.
+ */
 int tpl_recv(addr_t *src, uint8_t *data, uint8_t *size);
-
 
 #endif /* TPL_H_ */
