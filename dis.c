@@ -55,7 +55,7 @@ void dis_loop(void)
         kilo_ticks - mydis->last >= DIS_QUIET_TIME) {
         mydis->state = DIS_STATE_DONE;
         COLOR_APP(GREEN);
-        TRACE_APP("DISCOVERY DONE\n");
+        TRACE_APP("DIS DONE\n");
         return;
     }
 

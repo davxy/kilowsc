@@ -104,19 +104,19 @@ typedef void (* timeout_fun)(addr_t dst, uint8_t *data, uint8_t siz);
 
 /** Transport Protocol Layer context */
 struct tpl_ctx {
-    uint8_t         state;      /** Context state */
-    uint8_t         count;      /** Number of TX retries for acked PDUs */
-    uint8_t         flags;      /** Behavior flags */
-    uint8_t         dist;       /** Last RX message distance */
-    uint32_t        sent;       /** Last TX message time (kilo_ticks) */
-    message_t       msg;        /** Last TX message */
-    message_t       msg2;       /** Spare message used for emergency acks */
-    timeout_fun     timeout_cb; /** Callback for confirmed unicast failures */
-    buf_t           ack_buf;    /** TX acks buffer */
-    buf_t           rx_buf;     /** RX data buffer */
-    buf_t           tx_buf;     /** TX data buffer */
-    bitmap_t        rx_map;     /** RX sequence bitmap */
-    bitmap_t        tx_map;     /** TX sequence bitmap */
+    uint8_t         state;      /**< Context state */
+    uint8_t         count;      /**< Number of TX retries for acked PDUs */
+    uint8_t         flags;      /**< Behavior flags */
+    uint8_t         dist;       /**< Last RX message distance */
+    uint32_t        sent;       /**< Last TX message time (kilo_ticks) */
+    message_t       msg;        /**< Last TX message */
+    message_t       msg2;       /**< Spare message used for emergency acks */
+    timeout_fun     timeout_cb; /**< Callback for confirmed unicast failures */
+    buf_t           ack_buf;    /**< TX acks buffer */
+    buf_t           rx_buf;     /**< RX data buffer */
+    buf_t           tx_buf;     /**< TX data buffer */
+    bitmap_t        rx_map;     /**< RX sequence bitmap */
+    bitmap_t        tx_map;     /**< TX sequence bitmap */
 };
 
 /** Transport protocol context type alias */

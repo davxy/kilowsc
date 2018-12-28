@@ -59,8 +59,7 @@
 #define COLOR_TPL(col) ;
 #endif
 
-
-#define KILO_TICKS_PER_SEC  31
+#define KILO_TICKS_PER_SEC  32
 
 #define WHITE   (RGB(3,3,3))
 #define RED     (RGB(3,0,0))
