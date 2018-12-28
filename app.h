@@ -1,7 +1,7 @@
 #ifndef APP_H_
 #define APP_H_
 
-#include "discover.h"
+#include "dis.h"
 #include "spt.h"
 #include "wsc.h"
 #include "misc.h"
@@ -23,10 +23,10 @@ struct app_ctx {
     addr_t      neigh[NEIGHBORS_MAX];   /** Neighbors array */
     uint8_t     proto;      /** Current application protocol */
     tpl_ctx_t   tpl;        /** Transport protocol context */
-    union {                     /** Application layer protocols */
-        discover_ctx_t dis;     /** Discovery protocol context */
-        spt_ctx_t      spt;     /** Spanning tree protocol context */
-        wsc_ctx_t      wsc;     /** Witch says color context */
+    union {                 /** Application layer protocols */
+        dis_ctx_t dis;      /** Discovery protocol context */
+        spt_ctx_t spt;      /** Spanning tree protocol context */
+        wsc_ctx_t wsc;      /** Witch says color context */
     };
 };
 

@@ -10,14 +10,14 @@ KILO_PATH := /home/davxy/dev/kilobot/kilombo/install/usr/local
 # Skip the election procedure
 #SKIP_ELECTION := y
 
-# Trasport layer visual (led colors) feedback
-#VISUAL_CHAN := y
+# Visual trasport protocol layer (led colors)
+#VISUAL_TPL := y
 
-# Application layer visual (led colors) feedback
+# Visual application layer visual (led colors)
 VISUAL_APP := y
 
-# Verbose transport layer
-#VERBOSE_CHAN := y
+# Verbose transport protocol layer
+#VERBOSE_TPL := y
 
 # Verbose application layer
 VERBOSE_APP := y

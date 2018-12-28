@@ -1,8 +1,14 @@
-#include "discover.h"
 #include "app.h"
+#include "dis.h"
 
 
 #define mydis (&mydata->dis)
+
+
+#define DIS_TIME          (10 * KILO_TICKS_PER_SEC)
+
+#define DIS_RAND_OFF \
+        (rand() % (3 * KILO_TICKS_PER_SEC))
 
 
 static void neighbor_print(void)
@@ -29,32 +35,32 @@ static void neighbor_add(addr_t addr)
     }
 }
 
-void discover_loop(void)
+void dis_loop(void)
 {
     addr_t src;
 
     if (mydis->start == 0) {
         mydis->start = kilo_ticks; /*First run */
-        mydis->next = kilo_ticks + DISCOVERY_RAND_OFF;
+        mydis->next = kilo_ticks + DIS_RAND_OFF;
     }
 
-    if (kilo_ticks >= mydis->start + DISCOVERY_TIME) {
-        mydis->state = DISCOVER_STATE_DONE;
+    if (kilo_ticks >= mydis->start + DIS_TIME) {
+        mydis->state = DIS_STATE_DONE;
         COLOR_APP(GREEN);
         return;
     }
 
-    if (mydis->state == DISCOVER_STATE_IDLE) {
+    if (mydis->state == DIS_STATE_IDLE) {
         /* some rand to try to avoid collisions */
         if (kilo_ticks > mydis->next) {
-            mydis->state = DISCOVER_STATE_ACTIVE;
+            mydis->state = DIS_STATE_ACTIVE;
             COLOR_APP(RED);
             tpl_send(TPL_BROADCAST_ADDR, NULL, 0);
-            mydis->next = kilo_ticks + DISCOVERY_RAND_OFF;
+            mydis->next = kilo_ticks + DIS_RAND_OFF;
             neighbor_print();
         }
     } else {
-        mydis->state = DISCOVER_STATE_IDLE;
+        mydis->state = DIS_STATE_IDLE;
         COLOR_APP(WHITE);
     }
 
@@ -62,10 +68,10 @@ void discover_loop(void)
         neighbor_add(src);
 }
 
-void discover_init(void)
+void dis_init(void)
 {
     memset(mydis, 0, sizeof(*mydis));
     mydis->start = kilo_ticks;
-    mydis->state = DISCOVER_STATE_IDLE;
+    mydis->state = DIS_STATE_IDLE;
     COLOR_APP(WHITE);
 }

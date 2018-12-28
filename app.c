@@ -9,8 +9,8 @@ static void loop(void)
 {
     switch (mydata->proto) {
     case APP_PROTO_DIS:
-        discover_loop();
-        if (mydata->dis.state == DISCOVER_STATE_DONE) {
+        dis_loop();
+        if (mydata->dis.state == DIS_STATE_DONE) {
             tpl_flush();
             if (mydata->nneigh > 0) {
                 mydata->proto = APP_PROTO_SPT;
@@ -59,9 +59,9 @@ static void setup(void)
     mydata->uid = kilo_uid;
 
 #ifndef SKIP_ELECTION
+    dis_init();
     mydata->gid = TPL_BROADCAST_ADDR;
     mydata->proto = APP_PROTO_DIS;
-    discover_init();
 #else
     wsc_init();
     mydata->gid = DEFAULT_WSC_GID;

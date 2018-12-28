@@ -33,7 +33,7 @@ endif
 
 .PHONY: clean all
 
-objects := app.o buf.o tpl.o discover.o spt.o wsc.o
+objects := app.o buf.o tpl.o dis.o spt.o wsc.o
 depends = $(patsubst %.o,%.d,$(objects))
 
 target := wsc
