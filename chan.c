@@ -5,6 +5,11 @@
 
 #define mychan  (&mydata->chan)
 
+#define PDU_FLAG_CON            0x80
+#define PDU_FLAG_ACK            0x40
+#define PDU_FLAG_SEQ            0x20
+#define PDU_LEN_MASK            0x07
+
 
 static int chan_buf_write(struct buf *buf, addr_t addr,
                           uint8_t *data, uint8_t size)
@@ -79,7 +84,13 @@ int chan_recv(addr_t *src, uint8_t *data, uint8_t *size)
     return res;
 }
 
-
+/*
+ * Callback invoked by the kilobot communication sub-system to send a packet
+ * Priority:
+ * 1. Packet Retry
+ * 2. Packet ACK
+ * 3. Normal Packet
+ */
 static message_t *message_tx(void)
 {
     message_t *msg;
@@ -109,6 +120,7 @@ static message_t *message_tx(void)
         return msg;
     }
 
+    /* First check if there is any pending ACK to send */
     if (buf_read(&mychan->ack_buf, &dst, 1) == 0) {
         flg |= PDU_FLAG_ACK;
         if (CHAN_BITMAP_GET(mychan->rx_map, dst) != 0)
@@ -125,6 +137,7 @@ static message_t *message_tx(void)
         return msg;
     }
 
+    /* Normal packet send */
     msg = &mychan->msg;
     flg = SDU_MAX;
     if (mychan->state != CHAN_STATE_IDLE ||
@@ -133,7 +146,7 @@ static message_t *message_tx(void)
         return NULL;
     }
 
-    if (dst != BROADCAST_ADDR) {
+    if (dst != BROADCAST_ADDR && (mychan->flags & CHAN_FLAG_DATAGRAM) == 0) {
         flg |= PDU_FLAG_CON;
         if (CHAN_BITMAP_GET(mychan->tx_map, dst) != 0)
             flg |= PDU_FLAG_SEQ;
@@ -167,14 +180,22 @@ static void message_tx_success(void)
 static void message_rx(message_t *m, distance_measurement_t *d)
 {
     addr_t dst, src;
+    addr_t exp_addr;
     uint8_t flg, dist;
+    uint8_t promisc = 0;
+    uint8_t len;
+    uint8_t data[PDU_MAX];
 
     src = m->data[0];
     dst = m->data[1];
     flg = m->data[2];
 
-    if (dst != kilo_uid && dst != BROADCAST_ADDR)
-        return; /* not our business */
+    if (dst != kilo_uid && dst != BROADCAST_ADDR) {
+        if ((mychan->flags & CHAN_FLAG_PROMISC) != 0)
+            promisc = 1;
+        else
+            return; /* not our business */
+    }
 
     dist = estimate_distance(d);
     TRACE_CHAN("RECV: src=%u, dst=%u (CON=%d,ACK=%d,SEQ=%u,LEN=%u,DIST=%u)\n",
@@ -182,11 +203,10 @@ static void message_rx(message_t *m, distance_measurement_t *d)
             (flg & PDU_FLAG_SEQ) != 0, (flg & PDU_LEN_MASK), dist);
 
     /* Check if is an ACK */
-    if ((flg & PDU_FLAG_ACK) != 0) {
+    if ((flg & PDU_FLAG_ACK) != 0 && promisc == 0) {
         if (mychan->state == CHAN_STATE_WAIT_ACK) {
-            addr_t exp_addr; /* Expected ack address */
-
-            exp_addr = mychan->msg.data[1]; /* read from last sent message */
+            /* Read expected address from last sent message */
+            exp_addr = mychan->msg.data[1];
             if (exp_addr == src) {
                 if (((flg & PDU_FLAG_SEQ) != 0) != CHAN_BITMAP_GET(mychan->tx_map, src)) {
                     TRACE_CHAN("IGNORE DUPLICATE ACK\n");
@@ -201,7 +221,7 @@ static void message_rx(message_t *m, distance_measurement_t *d)
         return;
     }
 
-    if ((flg & PDU_FLAG_CON) != 0) {
+    if ((flg & PDU_FLAG_CON) != 0 && promisc == 0) {
         if (((flg & PDU_FLAG_SEQ) != 0) != CHAN_BITMAP_GET(mychan->rx_map, src)) {
             TRACE_CHAN(">>> IGNORE DUPLICATE INFO (send ack)\n");
             /* This change the ack number to the correct one */
@@ -212,10 +232,7 @@ static void message_rx(message_t *m, distance_measurement_t *d)
     }
 
     /* Information fetch */
-    /* Use flg position to store dist */
-    uint8_t data[PDU_MAX];
-    uint8_t len = flg & PDU_LEN_MASK;
-
+    len = flg & PDU_LEN_MASK;
     if (len > SDU_MAX) {
         TRACE_CHAN("Ignore msg with bad len field\n");
         return;
@@ -228,7 +245,7 @@ static void message_rx(message_t *m, distance_measurement_t *d)
     }
 
     /* Check if requires confirmation */
-    if ((flg & PDU_FLAG_CON) != 0)
+    if ((flg & PDU_FLAG_CON) != 0 && promisc == 0)
         ack_send(src);
 }
 
