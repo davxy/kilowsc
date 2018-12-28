@@ -222,7 +222,7 @@ static void spontaneous(void)
     mywsc->dist = DIST_MAX;
     mywsc->dist_src = mydata->uid;
     ASSERT(mydata->nneigh != 0);
-    TRACE("TARGET SEARCH to %u\n", mydata->neigh[0]);
+    TRACE_APP("TARGET SEARCH to %u\n", mydata->neigh[0]);
     update_send(mydata->neigh[0]);
 }
 
@@ -264,13 +264,13 @@ void wsc_loop(void)
 
         /* Ignore messages from other groups */
         if (pdu.gid != mydata->gid) {
-            TRACE("IGNORE other group\n");
+            TRACE_APP("IGNORE other group\n");
             return;
         }
 
         if (pdu.tar == TPL_BROADCAST_ADDR && mywsc->target == TPL_BROADCAST_ADDR) {
             if (mydata->nneigh != 1) {
-                TRACE("TARGET SEARCH from %u\n", src);
+                TRACE_APP("TARGET SEARCH from %u\n", src);
                 spontaneous();
             } else {
                 /* Leaf */
@@ -286,7 +286,7 @@ void wsc_loop(void)
         }
 
         if (mydata->uid == mywsc->target && mydata->tpl.dist <= DIST_MIN) {
-            TRACE(">>> CATCHED <<<\n");
+            TRACE_APP(">>> CATCHED <<<\n");
             wsc_match(src);
             return;
         }
