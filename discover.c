@@ -49,7 +49,7 @@ void discover_loop(void)
         if (kilo_ticks > mydisc->next) {
             mydisc->state = DISCOVER_STATE_ACTIVE;
             COLOR_APP(RED);
-            chan_send(BROADCAST_ADDR, NULL, 0);
+            tpl_send(TPL_BROADCAST_ADDR, NULL, 0);
             mydisc->next = kilo_ticks + DISCOVERY_RAND_OFF;
             neighbor_print();
         }
@@ -58,7 +58,7 @@ void discover_loop(void)
         COLOR_APP(WHITE);
     }
 
-    if (chan_recv(&src, NULL, NULL) >= 0)
+    if (tpl_recv(&src, NULL, NULL) >= 0)
         neighbor_add(src);
 }
 

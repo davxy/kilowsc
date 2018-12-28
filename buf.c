@@ -1,7 +1,7 @@
 #include "buf.h"
 #include "misc.h"
 
-int buf_write(struct buf *buf, uint8_t *dat, uint8_t siz)
+int buf_write(buf_t *buf, uint8_t *dat, uint8_t siz)
 {
     if (buf_avail(buf) < siz)
         return -1;
@@ -29,7 +29,7 @@ int buf_write(struct buf *buf, uint8_t *dat, uint8_t siz)
     return 0;
 }
 
-int buf_read(struct buf *buf, uint8_t *dat, uint8_t siz)
+int buf_read(buf_t *buf, uint8_t *dat, uint8_t siz)
 {
     if (buf_size(buf) < siz)
         return -1;
@@ -52,4 +52,3 @@ int buf_read(struct buf *buf, uint8_t *dat, uint8_t siz)
     }
     return 0;
 }
-

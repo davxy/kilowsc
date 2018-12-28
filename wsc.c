@@ -69,7 +69,7 @@ static int wsc_send(uint8_t dst, struct wsc_pdu *pdu)
     data[1] = pdu->mch;
     data[2] = pdu->tar;
     data[3] = pdu->dis;
-    return chan_send(dst, data, sizeof(data));
+    return tpl_send(dst, data, sizeof(data));
 }
 
 static int wsc_recv(uint8_t *src, struct wsc_pdu *pdu)
@@ -78,7 +78,7 @@ static int wsc_recv(uint8_t *src, struct wsc_pdu *pdu)
     uint8_t data[4];
     uint8_t len = sizeof(data);
 
-    if ((res = chan_recv(src, data, &len)) == 0) {
+    if ((res = tpl_recv(src, data, &len)) == 0) {
         pdu->gid = data[0];
         pdu->mch = data[1];
         pdu->tar = data[2];
@@ -107,7 +107,7 @@ static int collision_avoid(uint8_t src, uint8_t match_cnt)
             match_cnt == mywsc->match_cnt)
         return 0;
 
-    if (mydata->chan.dist < COLLISION_DIST ) {
+    if (mydata->tpl.dist < COLLISION_DIST ) {
         TRACE_APP("AVOID COLLISION!!!\n");
         if (mywsc->move == MOVING_STOP) {
             if (mydata->uid < src)
@@ -217,7 +217,7 @@ static void active_target(void)
 
 static void spontaneous(void)
 {
-    mywsc->target = BROADCAST_ADDR;
+    mywsc->target = TPL_BROADCAST_ADDR;
     mywsc->state = WSC_STATE_ACTIVE;
     mywsc->dist = DIST_MAX;
     mywsc->dist_src = mydata->uid;
@@ -230,22 +230,23 @@ static void wsc_match(addr_t target)
 {
     mywsc->match_cnt++;
     mywsc->target = target;
-    mywsc->dist = mydata->chan.dist;
+    mywsc->dist = mydata->tpl.dist;
     mywsc->dist_src = target;
     /* Give him some time to escape */
     //mywsc->echo_tick = kilo_ticks + ESCAPE_TIME_TICKS;
     //mywsc->move_tick = kilo_ticks + ESCAPE_TIME_TICKS;
     MOVE_STOP();
     COLOR_APP(mydata->uid);
-    update_send(BROADCAST_ADDR);
+    update_send(TPL_BROADCAST_ADDR);
 }
 
 void wsc_loop(void)
 {
-    uint8_t dist, prev_dist, src, new_match = 0;
+    uint8_t dist, src;
+    //uint8_t prev_dist, new_match = 0;
     struct wsc_pdu pdu;
 
-    prev_dist = mywsc->dist;
+    //prev_dist = mywsc->dist;
 
     /* spontaneous event for the group leader */
     if (mywsc->state == WSC_STATE_IDLE && mydata->uid == mydata->gid) {
@@ -267,7 +268,7 @@ void wsc_loop(void)
             return;
         }
 
-        if (pdu.tar == BROADCAST_ADDR && mywsc->target == BROADCAST_ADDR) {
+        if (pdu.tar == TPL_BROADCAST_ADDR && mywsc->target == TPL_BROADCAST_ADDR) {
             if (mydata->nneighbors != 1) {
                 TRACE("TARGET SEARCH from %u\n", src);
                 spontaneous();
@@ -279,12 +280,12 @@ void wsc_loop(void)
                 mywsc->dist_src = mydata->uid;
                 mywsc->state = WSC_STATE_ACTIVE;
                 mywsc->match_cnt++;
-                update_send(BROADCAST_ADDR);
+                update_send(TPL_BROADCAST_ADDR);
             }
             return;
         }
 
-        if (mydata->uid == mywsc->target && mydata->chan.dist <= DIST_MIN) {
+        if (mydata->uid == mywsc->target && mydata->tpl.dist <= DIST_MIN) {
             TRACE(">>> CATCHED <<<\n");
             wsc_match(src);
             return;
@@ -296,10 +297,10 @@ void wsc_loop(void)
 
         /*
          * Distance from target is computed as the one transported within
-         * the message plus the distance detected at channel level.
+         * the message plus the distance detected at tplnel level.
          */
-        dist = ((uint16_t)pdu.dis + mydata->chan.dist < DIST_MAX) ?
-                pdu.dis + mydata->chan.dist : DIST_MAX;
+        dist = ((uint16_t)pdu.dis + mydata->tpl.dist < DIST_MAX) ?
+                pdu.dis + mydata->tpl.dist : DIST_MAX;
 
         if (mywsc->state != WSC_STATE_IDLE) {
             /* Check if a new match is started */
@@ -316,7 +317,7 @@ void wsc_loop(void)
                 mywsc->match_cnt = pdu.mch;
                 mywsc->target = pdu.tar;
                 mywsc->flags &= ~WSC_FLAG_APPROACH;
-                new_match = 1;
+                //new_match = 1;
             } else if (mydata->uid != mywsc->target) {
                 update_hunter(src, dist, 0);
             }
@@ -335,7 +336,7 @@ void wsc_loop(void)
     }
 
     /* Active loop */
-    if (mywsc->state == WSC_STATE_ACTIVE && mywsc->target != BROADCAST_ADDR) {
+    if (mywsc->state == WSC_STATE_ACTIVE && mywsc->target != TPL_BROADCAST_ADDR) {
         if (mywsc->target != mydata->uid)
             active_hunter();
         else
@@ -347,18 +348,18 @@ void wsc_loop(void)
 #if 0
             if ((mywsc->dist != DIST_MAX && mywsc->dist <= prev_dist) ||
                     mywsc->target == mydata->uid || new_match == 1) {
-                update_send(BROADCAST_ADDR);
+                update_send(TPL_BROADCAST_ADDR);
             } else {
                 struct wsc_pdu pdu;
 
-                pdu.gid = BROADCAST_ADDR;
+                pdu.gid = TPL_BROADCAST_ADDR;
                 pdu.mch = mywsc->match_cnt;
                 pdu.tar = mywsc->target;
                 pdu.dis = mywsc->dist;
-                wsc_send(BROADCAST_ADDR, &pdu);
+                wsc_send(TPL_BROADCAST_ADDR, &pdu);
             }
 #else
-            update_send(BROADCAST_ADDR);
+            update_send(TPL_BROADCAST_ADDR);
 #endif
             TRACE_APP("STAT: gid=%u, tar=%u, mch=%u, dis=: %u\n",
                     mydata->gid, mywsc->target, mywsc->match_cnt, mywsc->dist);
@@ -371,7 +372,7 @@ void wsc_init(void)
     memset(mywsc, 0, sizeof(*mywsc));
     mywsc->dist =  DIST_MAX;
     mywsc->dist_src = mydata->uid;
-    mywsc->target = BROADCAST_ADDR;
-    mydata->chan.timeout_cb = NULL;
+    mywsc->target = TPL_BROADCAST_ADDR;
+    mydata->tpl.timeout_cb = NULL;
     COLOR_APP(mydata->uid);
 }

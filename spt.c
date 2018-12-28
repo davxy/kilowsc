@@ -66,7 +66,7 @@ static int pdu_send(struct spt_pdu *pdu, addr_t dst)
         data[1] = pdu->root;
         size++;
     }
-    return chan_send(dst, data, size);
+    return tpl_send(dst, data, size);
 }
 
 static int pdu_recv(struct spt_pdu *pdu, addr_t *src)
@@ -75,7 +75,7 @@ static int pdu_recv(struct spt_pdu *pdu, addr_t *src)
     uint8_t siz = APDU_SIZE_MAX;
     int res = 0;
 
-    if ((res = chan_recv(src, data, &siz)) < 0)
+    if ((res = tpl_recv(src, data, &siz)) < 0)
         return res;
 
     pdu->type = data[0];
@@ -91,7 +91,7 @@ static int pdu_recv(struct spt_pdu *pdu, addr_t *src)
     case PDU_TYPE_TERM_RES:
         if (siz != 1)
             res = -1;
-        pdu->root = BROADCAST_ADDR; /* Not used */
+        pdu->root = TPL_BROADCAST_ADDR; /* Not used */
         break;
     default:
         res = -1;
@@ -145,7 +145,7 @@ static void try_term(void)
         COLOR_APP(BLUE);
         ASSERT(myspt->notify_num == 0);
         myspt->notify_num = myspt->nchilds;
-        myspt->notify_skp = BROADCAST_ADDR; /* nothing to skip */
+        myspt->notify_skp = TPL_BROADCAST_ADDR; /* nothing to skip */
         myspt->state = SPT_STATE_TERM;
         myspt->checks = 0; /* received childs term-res */
     } else {
@@ -246,7 +246,7 @@ static void active_state(struct spt_pdu *pdu, addr_t src)
             COLOR_APP(BLUE);
             TRACE_APP("TERM to (%u) childs\n", myspt->nchilds);
             myspt->notify_num = myspt->nchilds;
-            myspt->notify_skp = BROADCAST_ADDR; /* nothing to skip */
+            myspt->notify_skp = TPL_BROADCAST_ADDR; /* nothing to skip */
             myspt->state = SPT_STATE_TERM;
             myspt->checks = 0; /* Received childs term-res */
         } else {
@@ -292,7 +292,7 @@ static void start_protocol(void)
     myspt->state = SPT_STATE_ACTIVE;
     myspt->root = kilo_uid;
     myspt->notify_num = mydata->nneighbors;
-    myspt->notify_skp = BROADCAST_ADDR; /* nothing to skip */
+    myspt->notify_skp = TPL_BROADCAST_ADDR; /* nothing to skip */
 }
 
 static int is_neighbor(addr_t addr)
@@ -308,8 +308,8 @@ static int is_neighbor(addr_t addr)
 
 static void timeout(addr_t dst, uint8_t *data, uint8_t siz)
 {
-    TRACE_APP("TIMEOUT sending to %u\n", dst);
     // TODO: remove from neighbor list
+    TRACE_APP("TIMEOUT waiting ACK from %u\n", dst);
     ASSERT(0);
 }
 
@@ -389,6 +389,6 @@ void spt_init(void)
     COLOR_APP(WHITE);
     myspt->state = SPT_STATE_IDLE;
     myspt->parent = kilo_uid;
-    mydata->chan.timeout_cb = timeout;
+    mydata->tpl.timeout_cb = timeout;
     myspt->start = kilo_ticks + SPT_RAND_INIT_OFF; /* random start offset */
 }

@@ -14,16 +14,16 @@ ifeq ($(KILOMBO),y)
 CFLAGS += -DKILOMBO
 endif
 
-ifeq ($(VISUAL_CHAN),y)
-CFLAGS += -DVISUAL_CHAN
+ifeq ($(VISUAL_TPL),y)
+CFLAGS += -DVISUAL_TPL
 endif
 
 ifeq ($(VISUAL_APP),y)
 CFLAGS += -DVISUAL_APP
 endif
 
-ifeq ($(VERBOSE_CHAN),y)
-CFLAGS += -DVERBOSE_CHAN
+ifeq ($(VERBOSE_TPL),y)
+CFLAGS += -DVERBOSE_TPL
 endif
 
 ifeq ($(VERBOSE_APP),y)
@@ -33,7 +33,7 @@ endif
 
 .PHONY: clean all
 
-objects := app.o buf.o chan.o discover.o spt.o wsc.o
+objects := app.o buf.o tpl.o discover.o spt.o wsc.o
 depends = $(patsubst %.o,%.d,$(objects))
 
 target := wsc

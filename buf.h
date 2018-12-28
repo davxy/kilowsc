@@ -11,6 +11,9 @@ struct buf {
     uint8_t     dat[BUF_MAX_SIZE + 1];
 };
 
+typedef struct buf buf_t;
+
+
 #define buf_avail(b) \
     (BUF_MAX_SIZE - buf_size(b))
 
@@ -22,8 +25,8 @@ struct buf {
 #define buf_flush(b) \
     ((b)->nrp = (b)->nwp = 0)
 
-int buf_write(struct buf *buf, uint8_t *dat, uint8_t siz);
+int buf_write(buf_t *buf, uint8_t *dat, uint8_t siz);
 
-int buf_read(struct buf *buf, uint8_t *dat, uint8_t siz);
+int buf_read(buf_t *buf, uint8_t *dat, uint8_t siz);
 
 #endif /* BUF_H_ */

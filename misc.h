@@ -39,12 +39,12 @@
 #define TRACE2_APP(...) ;
 #endif
 
-#ifdef VERBOSE_CHAN
-#define TRACE_CHAN(...)  TRACE(__VA_ARGS__)
-#define TRACE2_CHAN(...) TRACE2(__VA_ARGS__)
+#ifdef VERBOSE_TPL
+#define TRACE_TPL(...)  TRACE(__VA_ARGS__)
+#define TRACE2_TPL(...) TRACE2(__VA_ARGS__)
 #else
-#define TRACE_CHAN(...)  ;
-#define TRACE2_CHAN(...) ;
+#define TRACE_TPL(...)  ;
+#define TRACE2_TPL(...) ;
 #endif
 
 #ifdef VISUAL_APP
@@ -53,10 +53,10 @@
 #define COLOR_APP(col) ;
 #endif
 
-#ifdef VISUAL_CHAN
-#define COLOR_CHAN(col) set_color(col)
+#ifdef VISUAL_TPL
+#define COLOR_TPL(col) set_color(col)
 #else
-#define COLOR_CHAN(col) ;
+#define COLOR_TPL(col) ;
 #endif
 
 

@@ -11,7 +11,7 @@ static void loop(void)
     case APP_PROTO_DIS:
         discover_loop();
         if (mydata->discover.state == DISCOVER_STATE_DONE) {
-            chan_flush();
+            tpl_flush();
             if (mydata->nneighbors > 0) {
                 mydata->proto = APP_PROTO_SPT;
                 spt_init();
@@ -51,7 +51,7 @@ static void setup(void)
     set_color(WHITE);
 
     /* Communication channel init */
-    chan_init(0, NULL);
+    tpl_init(0, NULL);
 
     /* Application data init */
     memset(mydata, 0, sizeof(*mydata));
@@ -59,7 +59,7 @@ static void setup(void)
     mydata->uid = kilo_uid;
 
 #ifndef SKIP_ELECTION
-    mydata->gid = BROADCAST_ADDR;
+    mydata->gid = TPL_BROADCAST_ADDR;
     mydata->proto = APP_PROTO_DIS;
     discover_init();
 #else

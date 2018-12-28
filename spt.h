@@ -2,7 +2,7 @@
 #define SPT_H_
 
 #include "misc.h"
-#include "chan.h" /* addr_t */
+#include "tpl.h" /* addr_t */
 
 #define SPT_STATE_IDLE      0
 #define SPT_STATE_ACTIVE    1
