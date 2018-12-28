@@ -19,6 +19,8 @@ struct discover_ctx {
     uint32_t next;     /* Next discovery time */
 };
 
+typedef struct discover_ctx discover_ctx_t;
+
 void discover_init(void);
 
 void discover_loop(void);

@@ -8,24 +8,25 @@
 #include "tpl.h"
 
 #define APP_PROTO_DIS    0   /* Discovery */
-#define APP_PROTO_SPT    1   /* Spanning tree construction (multi-shout) */
-#define APP_PROTO_WSC    2   /* Witch says color (The game) */
+#define APP_PROTO_SPT    1   /* Spanning tree construction */
+#define APP_PROTO_WSC    2   /* Witch Says Color */
 
 #define NEIGHBORS_MAX    32
 
 #define DEFAULT_WSC_GID  0
 
+/** Application context */
 struct app_ctx {
-    uint8_t     uid;
-    uint8_t     gid;
-    uint8_t     nneighbors;
-    addr_t      neighbors[NEIGHBORS_MAX];
-    uint8_t     proto;
-    tpl_ctx_t   tpl;
-    union {
-        struct discover_ctx  discover;
-        struct spt_ctx       spt;
-        struct wsc_ctx       wsc;
+    addr_t      uid;        /** Node unique identifier */
+    addr_t      gid;        /** Node group identifier */
+    uint8_t     nneigh;     /** Number of neighbors */
+    addr_t      neigh[NEIGHBORS_MAX];   /** Neighbors array */
+    uint8_t     proto;      /** Current application protocol */
+    tpl_ctx_t   tpl;        /** Transport protocol context */
+    union {                     /** Application layer protocols */
+        discover_ctx_t dis;     /** Discovery protocol context */
+        spt_ctx_t      spt;     /** Spanning tree protocol context */
+        wsc_ctx_t      wsc;     /** Witch says color context */
     };
 };
 

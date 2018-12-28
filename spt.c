@@ -36,8 +36,6 @@
  * - Y (with our current myspt->root)
  * - Q (with a root value <= myspt->root)
  * From every neighbor.
- *
- * NOTE: ignore messages not from neighbors
  */
 
 #define myspt (&mydata->spt)
@@ -198,11 +196,11 @@ static void construct(addr_t src, addr_t root)
     }
 
     myspt->counter = 1;
-    if (myspt->counter == mydata->nneighbors) {
+    if (myspt->counter == mydata->nneigh) {
         check();
     } else {
         ASSERT(myspt->notify_num == 0);
-        myspt->notify_num = mydata->nneighbors;
+        myspt->notify_num = mydata->nneigh;
         myspt->notify_skp = src;
         COLOR_APP(RED);
     }
@@ -215,7 +213,7 @@ static void active_state(struct spt_pdu *pdu, addr_t src)
         TRACE_APP("RX Q <src=%u ,root=%u>\n", src, pdu->root);
         if (myspt->root == pdu->root) {
             myspt->counter++;
-            if (myspt->counter == mydata->nneighbors)
+            if (myspt->counter == mydata->nneigh)
                 check();
         } else if (myspt->root > pdu->root) {
             construct(src, pdu->root);
@@ -226,7 +224,7 @@ static void active_state(struct spt_pdu *pdu, addr_t src)
         if (myspt->root == pdu->root) {
             child_add(src);
             myspt->counter++;
-            if (myspt->counter == mydata->nneighbors)
+            if (myspt->counter == mydata->nneigh)
                 check();
         }
         break;
@@ -234,7 +232,7 @@ static void active_state(struct spt_pdu *pdu, addr_t src)
         TRACE_APP("RX CHECK <src=%u ,root=%u>\n", src, pdu->root);
         if (myspt->root == pdu->root) {
             myspt->checks++;
-            if (myspt->counter == mydata->nneighbors &&
+            if (myspt->counter == mydata->nneigh &&
                     myspt->checks == myspt->nchilds)
                 try_term();
         }
@@ -291,7 +289,7 @@ static void start_protocol(void)
     COLOR_APP(RED);
     myspt->state = SPT_STATE_ACTIVE;
     myspt->root = kilo_uid;
-    myspt->notify_num = mydata->nneighbors;
+    myspt->notify_num = mydata->nneigh;
     myspt->notify_skp = TPL_BROADCAST_ADDR; /* nothing to skip */
 }
 
@@ -299,11 +297,11 @@ static int is_neighbor(addr_t addr)
 {
     int i;
 
-    for (i = 0; i < mydata->nneighbors; i++) {
-        if (mydata->neighbors[i] == addr)
+    for (i = 0; i < mydata->nneigh; i++) {
+        if (mydata->neigh[i] == addr)
             break;
     }
-    return (i < mydata->nneighbors);
+    return (i < mydata->nneigh);
 }
 
 static void timeout(addr_t dst, uint8_t *data, uint8_t siz)
@@ -326,7 +324,7 @@ next:
     myspt->notify_num--;
     dst = (myspt->state == SPT_STATE_TERM) ?
         myspt->childs[myspt->notify_num] :
-        mydata->neighbors[myspt->notify_num];
+        mydata->neigh[myspt->notify_num];
     if (dst == myspt->notify_skp)
         goto next;
 

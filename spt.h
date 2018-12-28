@@ -24,6 +24,8 @@ struct spt_ctx {
     addr_t      notify_skp;
 };
 
+typedef struct spt_ctx spt_ctx_t;
+
 void spt_init(void);
 
 void spt_loop(void);

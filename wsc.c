@@ -221,9 +221,9 @@ static void spontaneous(void)
     mywsc->state = WSC_STATE_ACTIVE;
     mywsc->dist = DIST_MAX;
     mywsc->dist_src = mydata->uid;
-    ASSERT(mydata->nneighbors != 0);
-    TRACE("TARGET SEARCH to %u\n", mydata->neighbors[0]);
-    update_send(mydata->neighbors[0]);
+    ASSERT(mydata->nneigh != 0);
+    TRACE("TARGET SEARCH to %u\n", mydata->neigh[0]);
+    update_send(mydata->neigh[0]);
 }
 
 static void wsc_match(addr_t target)
@@ -269,7 +269,7 @@ void wsc_loop(void)
         }
 
         if (pdu.tar == TPL_BROADCAST_ADDR && mywsc->target == TPL_BROADCAST_ADDR) {
-            if (mydata->nneighbors != 1) {
+            if (mydata->nneigh != 1) {
                 TRACE("TARGET SEARCH from %u\n", src);
                 spontaneous();
             } else {

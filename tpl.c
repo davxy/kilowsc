@@ -100,12 +100,12 @@ static message_t *message_tx(void)
         TPL_BITMAP_TOGGLE(mytpl->rx_map, dst);
         msg = &mytpl->msg2;
         msg->type = NORMAL;
-        msg->data[0] = kilo_uid;
+        msg->data[0] = mydata->uid;
         msg->data[1] = dst;
         msg->data[2] = flg;
         msg->crc = message_crc(msg);
         TRACE_TPL("SEND: src=%u, dst=%u (CON=%d,ACK=%d,SEQ=%u)\n",
-                   kilo_uid, dst, 0, 1,(flg & PDU_FLAG_SEQ) != 0);
+                   mydata->uid, dst, 0, 1,(flg & PDU_FLAG_SEQ) != 0);
         return msg;
     }
 
@@ -130,13 +130,13 @@ static message_t *message_tx(void)
     mytpl->count = 0;
 
     msg->type = NORMAL;
-    msg->data[0] = kilo_uid;
+    msg->data[0] = mydata->uid;
     msg->data[1] = dst;
     msg->data[2] = flg;
     msg->crc = message_crc(msg);
 
     TRACE_TPL("SEND: src=%u, dst=%u (CON=%d,ACK=%d,SEQ=%u,LEN=%u)\n",
-            kilo_uid, dst, (flg & PDU_FLAG_CON) != 0, (flg & PDU_FLAG_ACK) != 0,
+            mydata->uid, dst, (flg & PDU_FLAG_CON) != 0, (flg & PDU_FLAG_ACK) != 0,
             (flg & PDU_FLAG_SEQ) != 0, (flg & PDU_LEN_MASK));
     COLOR_TPL(RED);
 
@@ -162,7 +162,7 @@ static void message_rx(message_t *m, distance_measurement_t *d)
     dst = m->data[1];
     flg = m->data[2];
 
-    if (dst != kilo_uid && dst != TPL_BROADCAST_ADDR) {
+    if (dst != mydata->uid && dst != TPL_BROADCAST_ADDR) {
         if ((mytpl->flags & TPL_FLAG_PROMISC) != 0)
             promisc = 1;
         else

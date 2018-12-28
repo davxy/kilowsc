@@ -10,9 +10,9 @@ static void loop(void)
     switch (mydata->proto) {
     case APP_PROTO_DIS:
         discover_loop();
-        if (mydata->discover.state == DISCOVER_STATE_DONE) {
+        if (mydata->dis.state == DISCOVER_STATE_DONE) {
             tpl_flush();
-            if (mydata->nneighbors > 0) {
+            if (mydata->nneigh > 0) {
                 mydata->proto = APP_PROTO_SPT;
                 spt_init();
             } else {
@@ -26,12 +26,12 @@ static void loop(void)
         if (mydata->spt.state == SPT_STATE_DONE) {
             mydata->gid = (uint8_t)mydata->spt.root;
             mydata->proto = APP_PROTO_WSC;
-            mydata->nneighbors = mydata->spt.nchilds;
-            memcpy(mydata->neighbors, mydata->spt.childs,
+            mydata->nneigh = mydata->spt.nchilds;
+            memcpy(mydata->neigh, mydata->spt.childs,
                    mydata->spt.nchilds * sizeof(addr_t));
             if (mydata->uid != mydata->gid) {
-                mydata->neighbors[mydata->nneighbors] = mydata->spt.parent;
-                mydata->nneighbors++;
+                mydata->neigh[mydata->nneigh] = mydata->spt.parent;
+                mydata->nneigh++;
             }
             wsc_init();
         }
@@ -72,8 +72,8 @@ static void setup(void)
          * The kilobot with uid equal to DEFAULT_WSC_GID will be both the
          * first witch and the target.
          */
-        mydata->nneighbors = 1;
-        mydata->neighbors[0] = mydata->uid;
+        mydata->nneigh = 1;
+        mydata->neigh[0] = mydata->uid;
         mydata->wsc.dist = 0;
     }
     mydata->wsc.target = DEFAULT_WSC_GID;

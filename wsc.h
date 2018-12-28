@@ -29,6 +29,8 @@ struct wsc_ctx {
     uint8_t  match_cnt;
 };
 
+typedef struct wsc_ctx wsc_ctx_t;
+
 /** Protocol initialization */
 void wsc_init(void);
 
