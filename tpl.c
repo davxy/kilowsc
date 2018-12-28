@@ -226,7 +226,10 @@ static void message_rx(message_t *m, distance_measurement_t *d)
 int tpl_send(addr_t dst, uint8_t *data, uint8_t size)
 {
     int res;
+    uint8_t rdata[TPL_PDU_MAX] = {0};
 
+    if (data == NULL && size > 0)
+        data = rdata;
     if ((res = tpl_buf_write(&mytpl->tx_buf, dst, data, size)) < 0)
         TRACE_TPL("TX FAIL\n");
     return res;
@@ -245,7 +248,8 @@ int tpl_recv(addr_t *src, uint8_t *data, uint8_t *size)
                 rsize = *size;
             *size = rsize;
         }
-        memcpy(data, rdata + 1, rsize);
+        if (data != NULL)
+            memcpy(data, rdata + 1, rsize);
         mytpl->dist = rdata[0];
     }
     return res;
