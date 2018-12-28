@@ -26,9 +26,9 @@ static void loop(void)
         if (mydata->spt.state == SPT_STATE_DONE) {
             mydata->gid = (uint8_t)mydata->spt.root;
             mydata->proto = APP_PROTO_WSC;
-            mydata->nneigh = mydata->spt.nchilds;
-            memcpy(mydata->neigh, mydata->spt.childs,
-                   mydata->spt.nchilds * sizeof(addr_t));
+            mydata->nneigh = mydata->spt.nchild;
+            memcpy(mydata->neigh, mydata->spt.child,
+                   mydata->spt.nchild * sizeof(addr_t));
             if (mydata->uid != mydata->gid) {
                 mydata->neigh[mydata->nneigh] = mydata->spt.parent;
                 mydata->nneigh++;
