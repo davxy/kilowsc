@@ -1,6 +1,7 @@
 #include "buf.h"
 #include "misc.h"
 
+
 int buf_write(buf_t *buf, uint8_t *dat, uint8_t siz)
 {
     if (buf_avail(buf) < siz)
