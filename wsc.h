@@ -21,7 +21,6 @@ struct wsc_ctx {
     uint32_t blink_tick;
     uint8_t  flags;
     uint8_t  state;
-    uint8_t  nodes;
     uint8_t  target;
     uint8_t  dist;
     uint8_t  dist_src;
