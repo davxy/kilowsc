@@ -324,7 +324,11 @@ void spt_loop(void)
 
     if (pdu_recv(&pdu, &src) < 0)
         return; /* Nothing to do */
-    ASSERT(is_neighbor(src));
+
+    if (!is_neighbor(src)) {
+        TRACE("Warning: SPT message from not neighbor node %u\n", src);
+        ASSERT(0);
+    }
 
     switch (myspt->state) {
     case SPT_STATE_IDLE:

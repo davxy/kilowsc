@@ -59,8 +59,6 @@ struct wsc_pdu {
     uint8_t dis;    /* Distance */
 };
 
-
-
 static int wsc_send(uint8_t dst, struct wsc_pdu *pdu)
 {
     uint8_t data[4];

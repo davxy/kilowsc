@@ -1,6 +1,8 @@
 #ifndef MISC_H_
 #define MISC_H_
 
+#include <string.h>
+#include <stdlib.h>
 #ifdef KILOMBO
 #include <kilombo.h>
 #include <stdio.h>
@@ -9,6 +11,13 @@
 #include <kilolib.h>    /* kilobot stand alone library */
 #include <avr/io.h>     /* microcontroller registers */
 #endif /* KILOMBO */
+
+
+#ifndef REGISTER_USER_DATA
+#define REGISTER_USERDATA(UDT) \
+    int UserdataSize = sizeof(UDT); \
+    UDT *mydata;
+#endif
 
 
 #ifdef KILOMBO
