@@ -35,7 +35,7 @@
 /*
  * Even though kilo_uid type is instanced as a uint16_t we set the address
  * type to be an uint8_t to save some space in the contexts data and in
- * the communication channel fragment header.
+ * the communication channel packet header.
  * 256 addresses are more than sufficient for practical applications.
  */
 typedef uint8_t addr_t;

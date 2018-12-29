@@ -7,9 +7,9 @@
 #define mytpl  (&mydata->tpl)
 
 /* PDU header flags */
-#define PDU_FLAG_CON            0x80
-#define PDU_FLAG_ACK            0x40
-#define PDU_FLAG_SEQ            0x20
+#define PDU_CTRL_CON            0x80
+#define PDU_CTRL_ACK            0x40
+#define PDU_CTRL_SEQ            0x20
 #define PDU_LEN_MASK            0x07
 
 #ifdef VERBOSE_BUF
@@ -94,7 +94,7 @@ static int ack_send(addr_t dst)
 static message_t *message_tx(void)
 {
     message_t *msg;
-    uint8_t flg = 0;
+    uint8_t ctrl = 0;
     addr_t dst;
 
     /* Retry metplism */
@@ -122,34 +122,34 @@ static message_t *message_tx(void)
 
     /* First check if there is any pending ACK to send */
     if (buf_read(&mytpl->ack_buf, &dst, 1) == 0) {
-        flg |= PDU_FLAG_ACK;
+        ctrl |= PDU_CTRL_ACK;
         if (TPL_BITMAP_GET(mytpl->rx_map, dst) != 0)
-            flg |= PDU_FLAG_SEQ;
+            ctrl |= PDU_CTRL_SEQ;
         TPL_BITMAP_TOGGLE(mytpl->rx_map, dst);
         msg = &mytpl->msg2;
         msg->type = NORMAL;
         msg->data[0] = mydata->uid;
         msg->data[1] = dst;
-        msg->data[2] = flg;
+        msg->data[2] = ctrl;
         msg->crc = message_crc(msg);
         TRACE_TPL("SEND: src=%u, dst=%u (CON=%d,ACK=%d,SEQ=%u)\n",
-                   mydata->uid, dst, 0, 1,(flg & PDU_FLAG_SEQ) != 0);
+                   mydata->uid, dst, 0, 1,(ctrl & PDU_CTRL_SEQ) != 0);
         return msg;
     }
 
     /* Normal packet send */
     msg = &mytpl->msg;
-    flg = TPL_SDU_MAX;
+    ctrl = TPL_SDU_MAX;
     if (mytpl->state != TPL_STATE_IDLE ||
-        tpl_buf_read(&mytpl->tx_buf, &dst, msg->data + TPL_PCI_SIZE, &flg) < 0) {
+        tpl_buf_read(&mytpl->tx_buf, &dst, msg->data + TPL_PCI_SIZE, &ctrl) < 0) {
         COLOR_TPL(WHITE);
         return NULL;
     }
 
     if (dst != TPL_BROADCAST_ADDR && (mytpl->flags & TPL_FLAG_DATAGRAM) == 0) {
-        flg |= PDU_FLAG_CON;
+        ctrl |= PDU_CTRL_CON;
         if (TPL_BITMAP_GET(mytpl->tx_map, dst) != 0)
-            flg |= PDU_FLAG_SEQ;
+            ctrl |= PDU_CTRL_SEQ;
         mytpl->state = TPL_STATE_WAIT_ACK;
     } else {
         mytpl->state = TPL_STATE_WAIT_TX;
@@ -160,12 +160,12 @@ static message_t *message_tx(void)
     msg->type = NORMAL;
     msg->data[0] = mydata->uid;
     msg->data[1] = dst;
-    msg->data[2] = flg;
+    msg->data[2] = ctrl;
     msg->crc = message_crc(msg);
 
     TRACE_TPL("SEND: src=%u, dst=%u (CON=%d,ACK=%d,SEQ=%u,LEN=%u)\n",
-            mydata->uid, dst, (flg & PDU_FLAG_CON) != 0, (flg & PDU_FLAG_ACK) != 0,
-            (flg & PDU_FLAG_SEQ) != 0, (flg & PDU_LEN_MASK));
+            mydata->uid, dst, (ctrl & PDU_CTRL_CON) != 0, (ctrl & PDU_CTRL_ACK) != 0,
+            (ctrl & PDU_CTRL_SEQ) != 0, (ctrl & PDU_LEN_MASK));
     COLOR_TPL(RED);
 
     return msg;
@@ -181,14 +181,14 @@ static void message_rx(message_t *m, distance_measurement_t *d)
 {
     addr_t dst, src;
     addr_t exp_addr;
-    uint8_t flg, dist;
+    uint8_t ctrl, dist;
     uint8_t promisc = 0;
     uint8_t len;
     uint8_t data[TPL_PDU_MAX];
 
     src = m->data[0];
     dst = m->data[1];
-    flg = m->data[2];
+    ctrl = m->data[2];
 
     if (dst != mydata->uid && dst != TPL_BROADCAST_ADDR) {
         if ((mytpl->flags & TPL_FLAG_PROMISC) != 0)
@@ -199,16 +199,16 @@ static void message_rx(message_t *m, distance_measurement_t *d)
 
     dist = estimate_distance(d);
     TRACE_TPL("RECV: src=%u, dst=%u (CON=%d,ACK=%d,SEQ=%u,LEN=%u,DIST=%u)\n",
-            src, dst, (flg & PDU_FLAG_CON) != 0, (flg & PDU_FLAG_ACK) != 0,
-            (flg & PDU_FLAG_SEQ) != 0, (flg & PDU_LEN_MASK), dist);
+            src, dst, (ctrl & PDU_CTRL_CON) != 0, (ctrl & PDU_CTRL_ACK) != 0,
+            (ctrl & PDU_CTRL_SEQ) != 0, (ctrl & PDU_LEN_MASK), dist);
 
     /* Check if is an ACK */
-    if ((flg & PDU_FLAG_ACK) != 0 && promisc == 0) {
+    if ((ctrl & PDU_CTRL_ACK) != 0 && promisc == 0) {
         if (mytpl->state == TPL_STATE_WAIT_ACK) {
             /* Read expected address from last sent message */
             exp_addr = mytpl->msg.data[1];
             if (exp_addr == src) {
-                if (((flg & PDU_FLAG_SEQ) != 0) != TPL_BITMAP_GET(mytpl->tx_map, src)) {
+                if (((ctrl & PDU_CTRL_SEQ) != 0) != TPL_BITMAP_GET(mytpl->tx_map, src)) {
                     TRACE_TPL("IGNORE DUPLICATE ACK\n");
                     ASSERT(0);  /* Should never happen */
                     return;     /* Wrong ack no */
@@ -221,8 +221,8 @@ static void message_rx(message_t *m, distance_measurement_t *d)
         return;
     }
 
-    if ((flg & PDU_FLAG_CON) != 0 && promisc == 0) {
-        if (((flg & PDU_FLAG_SEQ) != 0) != TPL_BITMAP_GET(mytpl->rx_map, src)) {
+    if ((ctrl & PDU_CTRL_CON) != 0 && promisc == 0) {
+        if (((ctrl & PDU_CTRL_SEQ) != 0) != TPL_BITMAP_GET(mytpl->rx_map, src)) {
             TRACE_TPL(">>> IGNORE DUPLICATE INFO (send ack)\n");
             /* This tplge the ack number to the correct one */
             TPL_BITMAP_TOGGLE(mytpl->rx_map, src);
@@ -232,7 +232,7 @@ static void message_rx(message_t *m, distance_measurement_t *d)
     }
 
     /* Information fetch */
-    len = flg & PDU_LEN_MASK;
+    len = ctrl & PDU_LEN_MASK;
     if (len > TPL_SDU_MAX) {
         TRACE_TPL("Ignore msg with bad len field\n");
         return;
@@ -245,7 +245,7 @@ static void message_rx(message_t *m, distance_measurement_t *d)
     }
 
     /* Check if requires confirmation */
-    if ((flg & PDU_FLAG_CON) != 0 && promisc == 0)
+    if ((ctrl & PDU_CTRL_CON) != 0 && promisc == 0)
         ack_send(src);
 }
 
