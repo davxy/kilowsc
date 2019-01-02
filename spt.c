@@ -294,7 +294,7 @@ next:
         TRACE_APP("TX TERM-REQ <dst=%u>\n", dst);
         pdu.type = PDU_TYPE_FIN_REQ;
     } else {
-        TRACE_APP("TX Q <dst=%u ,root=%u>\n", dst, myspt->root);
+        TRACE_APP("TX ASK <dst=%u ,root=%u>\n", dst, myspt->root);
         pdu.type = PDU_TYPE_ASK;
         pdu.root = myspt->root;
     }
@@ -326,8 +326,16 @@ void spt_loop(void)
         return; /* Nothing to do */
 
     if (!is_neighbor(src)) {
-        TRACE("Warning: SPT message from not neighbor node %u\n", src);
-        //ASSERT(0);
+        TRACE_APP("Warning: SPT message from not neighbor node %u\n", src);
+        /*
+         * Hack: send back an ASK message with the same root.
+         * The message let the source think that we are already part of the
+         * tree but with another parent.
+         */
+        TRACE_APP("TX ASK <dst=%u ,root=%u>\n", src, pdu.root);
+        pdu.type = PDU_TYPE_ASK;
+        pdu_send(&pdu, src);
+        return;
     }
 
     switch (myspt->state) {

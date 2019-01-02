@@ -54,7 +54,7 @@ typedef uint8_t addr_t;
 /** Maximum Service Data Unit (PDU payload information) size. */
 #define TPL_SDU_MAX             (TPL_PDU_MAX - TPL_PCI_SIZE)
 /** Maximum number of retries for acknowledged packets */
-#define TPL_RETRY_MAX           10
+#define TPL_RETRY_MAX           16
 /** Number of seconds between retries (linear strategy) */
 #define TPL_ACK_TIMEOUT         (3*KILO_TICKS_PER_SEC)
 /** @} */
