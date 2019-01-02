@@ -32,7 +32,7 @@ static int pdu_send(struct spt_pdu *pdu, addr_t dst)
         data[1] = pdu->root;
         size++;
     }
-    return tpl_send(dst, data, size);
+    return app_send(dst, data, size);
 }
 
 static int pdu_recv(struct spt_pdu *pdu, addr_t *src)
@@ -41,7 +41,7 @@ static int pdu_recv(struct spt_pdu *pdu, addr_t *src)
     uint8_t siz = 2;
     int res = 0;
 
-    if ((res = tpl_recv(src, data, &siz)) < 0)
+    if ((res = app_recv(src, data, &siz)) < 0)
         return res;
 
     pdu->type = data[0];
@@ -327,7 +327,7 @@ void spt_loop(void)
 
     if (!is_neighbor(src)) {
         TRACE("Warning: SPT message from not neighbor node %u\n", src);
-        ASSERT(0);
+        //ASSERT(0);
     }
 
     switch (myspt->state) {

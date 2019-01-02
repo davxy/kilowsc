@@ -63,7 +63,7 @@ void dis_loop(void)
         if (kilo_ticks >= mydis->next) {
             mydis->state = DIS_STATE_ACTIVE;
             COLOR_APP(RED);
-            tpl_send(TPL_BROADCAST_ADDR, NULL, 0);
+            app_send(TPL_BROADCAST_ADDR, NULL, 0);
             mydis->next = kilo_ticks + DIS_RAND_OFF;
         }
     } else {
@@ -71,7 +71,7 @@ void dis_loop(void)
         COLOR_APP(WHITE);
     }
 
-    if (tpl_recv(&src, NULL, NULL) == 0)
+    if (app_recv(&src, NULL, NULL) == 0)
         neighbor_add(src);
 }
 

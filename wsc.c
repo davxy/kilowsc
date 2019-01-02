@@ -67,7 +67,7 @@ static int wsc_send(uint8_t dst, struct wsc_pdu *pdu)
     data[1] = pdu->mch;
     data[2] = pdu->tar;
     data[3] = pdu->dis;
-    return tpl_send(dst, data, sizeof(data));
+    return app_send(dst, data, sizeof(data));
 }
 
 static int wsc_recv(uint8_t *src, struct wsc_pdu *pdu)
@@ -76,7 +76,7 @@ static int wsc_recv(uint8_t *src, struct wsc_pdu *pdu)
     uint8_t data[4];
     uint8_t len = sizeof(data);
 
-    if ((res = tpl_recv(src, data, &len)) == 0) {
+    if ((res = app_recv(src, data, &len)) == 0) {
         pdu->gid = data[0];
         pdu->mch = data[1];
         pdu->tar = data[2];
@@ -107,14 +107,20 @@ static int collision_avoid(uint8_t src, uint8_t match_cnt)
 
     if (mydata->tpl.dist < COLLISION_DIST ) {
         TRACE_APP("AVOID COLLISION!!!\n");
-        if (mywsc->move == MOVING_STOP) {
+        if (mywsc->min_dist_src == src &&
+            mydata->tpl.dist <= mywsc->min_dist) {
+            TRACE("DECR\n");
+            if (mywsc->move != MOVING_RIGHT)
+                MOVE_RIGHT();
+        } else {
+            TRACE("NEW\n");
+            mywsc->min_dist_src = src;
             if (mydata->uid < src)
                 MOVE_LEFT();
-            //else
-            //    MOVE_LEFT();
-        } else {
-            MOVE_STOP();
+            else
+                MOVE_STOP();
         }
+        mywsc->min_dist = mydata->tpl.dist;
         res = 1;
     }
     return res;
@@ -131,7 +137,7 @@ static void update_hunter(uint8_t src, uint8_t dist, uint8_t force)
         mywsc->aging_tick = kilo_ticks + AGING_PERIOD_TICKS;
     }
 
-    if ((dist > prev_dist && dist - prev_dist > 10) ||
+    if ((dist > prev_dist && dist - prev_dist > 5) ||
             dist == DIST_MAX || src == kilo_uid) {
         /* Distance has increased */
         if ((mywsc->flags & WSC_FLAG_APPROACH) != 0) {
@@ -241,10 +247,10 @@ static void wsc_match(addr_t target)
 void wsc_loop(void)
 {
     uint8_t dist, src;
-    //uint8_t prev_dist, new_match = 0;
+   // uint8_t prev_dist, new_match = 0;
     struct wsc_pdu pdu;
 
-    //prev_dist = mywsc->dist;
+   //prev_dist = mywsc->dist;
 
     /* spontaneous event for the group leader */
     if (mywsc->state == WSC_STATE_IDLE && mydata->uid == mydata->gid) {
@@ -370,6 +376,8 @@ void wsc_init(void)
     memset(mywsc, 0, sizeof(*mywsc));
     mywsc->dist =  DIST_MAX;
     mywsc->dist_src = mydata->uid;
+    mywsc->min_dist = DIST_MAX;
+    mywsc->min_dist_src = TPL_BROADCAST_ADDR;
     mywsc->target = TPL_BROADCAST_ADDR;
     mydata->tpl.timeout_cb = NULL;
     COLOR_APP(mydata->uid);

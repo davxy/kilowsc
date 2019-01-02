@@ -11,11 +11,11 @@
  * Application protocols. @{
  */
 /** Neighbor discovery */
-#define APP_PROTO_DIS       0
+#define APP_PROTO_DIS       1
 /** Spanning tree construction */
-#define APP_PROTO_SPT       1
+#define APP_PROTO_SPT       2
 /** Witch Says Color */
-#define APP_PROTO_WSC       2
+#define APP_PROTO_WSC       3
 /** @} */
 
 /** Max number of allowed node neighbors. */
@@ -45,5 +45,30 @@ typedef struct app_ctx app_ctx_t;
 extern struct app_ctx *mydata;
 /** Application context instance pointer alias. */
 #define myapp mydata
+
+/**
+ * Application wrapper layer data send.
+ *
+ * All or nothing send function.
+ *
+ * @param dst   Destination peer address.
+ * @param data  Data raw buffer pointer.
+ * @param size  Data raw buffer size.
+ * @return      0 on success, -1 on failure.
+ */
+int app_send(addr_t addr, uint8_t *data, uint8_t size);
+
+/**
+ * Application wrapper layer data recv.
+ *
+ * The 'size' parameter is used for both input and output.
+ *
+ * @param src   Source peer address.
+ * @param data  Data raw buffer pointer.
+ * @param size  Data raw buffer size.
+ *              On success this is changed to the number of bytes received.
+ * @return      0 on success, -1 on failure.
+ */
+int app_recv(addr_t *src, uint8_t *data, uint8_t *size);
 
 #endif /* APP_H_ */

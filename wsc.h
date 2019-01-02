@@ -24,6 +24,8 @@ struct wsc_ctx {
     uint8_t  target;
     uint8_t  dist;
     uint8_t  dist_src;
+    uint8_t  min_dist;
+    uint8_t  min_dist_src;
     uint8_t  move;
     uint8_t  match_cnt;
 };

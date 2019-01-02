@@ -5,8 +5,42 @@
 /* Application context data instance */
 REGISTER_USERDATA(app_ctx_t)
 
+
+/* Application wrapper layer data send */
+int app_send(addr_t dst, uint8_t *data, uint8_t size)
+{
+    int res;
+    uint8_t wdata[TPL_SDU_MAX];
+
+    if (size + 1 > TPL_SDU_MAX)
+        return -1;
+    wdata[0] = mydata->proto;
+    memcpy(wdata + 1, data, size);
+    res = tpl_send(dst, wdata, size + 1);
+    return res;
+}
+
+/* Application wrapper layer data recv */
+int app_recv(addr_t *src, uint8_t *data, uint8_t *size)
+{
+    int res;
+    uint8_t wdata[TPL_SDU_MAX];
+    uint8_t wsize = TPL_SDU_MAX;
+
+    if ((res = tpl_recv(src, wdata, &wsize)) < 0)
+        return res;
+    if (wsize == 0 || wdata[0] != mydata->proto)
+        return -1;
+    if (size != NULL)
+        *size = wsize - 1;
+    if (data != NULL)
+        memcpy(data, wdata + 1, wsize - 1);
+    return res;
+}
+
+
 /* Application loop */
-static void loop(void)
+static void app_loop(void)
 {
     switch (mydata->proto) {
     case APP_PROTO_DIS:
@@ -46,7 +80,7 @@ static void loop(void)
 }
 
 /* Application initialization */
-static void setup(void)
+static void app_setup(void)
 {
     set_motors(0, 0);
     set_color(WHITE);
@@ -86,6 +120,6 @@ int main(void)
 {
     srand(time(NULL));
     kilo_init();
-    kilo_start(setup, loop);
+    kilo_start(app_setup, app_loop);
     return 0;
 }
