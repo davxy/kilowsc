@@ -51,7 +51,7 @@ static void app_loop(void)
                 mydata->proto = APP_PROTO_SPT;
                 spt_init();
             } else {
-                mydata->proto = 0xFF;
+                mydata->proto = 0xFF; /* Nothing to do, just sleep */
                 COLOR_APP(WHITE);
             }
         }

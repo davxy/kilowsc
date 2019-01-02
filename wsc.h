@@ -7,6 +7,8 @@
 #define WSC_STATE_IDLE      0
 /** Playing */
 #define WSC_STATE_ACTIVE    1
+/** Relax after catch */
+#define WSC_STATE_SLEEP     2
 
 /** Color is set */
 #define WSC_FLAG_COLOR_ON   (1 << 0)
