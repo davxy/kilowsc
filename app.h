@@ -2,8 +2,8 @@
 #define APP_H_
 
 #include "dis.h"
+#include "hnt.h"
 #include "spt.h"
-#include "wsc.h"
 #include "misc.h"
 #include "tpl.h"
 
@@ -35,7 +35,7 @@ struct app_ctx {
     union {                 /** Application layer protocols */
         dis_ctx_t dis;      /** Discovery protocol context */
         spt_ctx_t spt;      /** Spanning tree protocol context */
-        wsc_ctx_t wsc;      /** Witch says color context */
+        hnt_ctx_t hnt;      /** Witch says color context */
     };
 };
 

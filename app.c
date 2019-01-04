@@ -68,11 +68,11 @@ static void app_loop(void)
                 mydata->neigh[mydata->nneigh] = mydata->spt.parent;
                 mydata->nneigh++;
             }
-            wsc_init();
+            hnt_init();
         }
         break;
     case APP_PROTO_WSC:
-        wsc_loop();
+        hnt_loop();
         break;
     default:
         break;
@@ -98,21 +98,21 @@ static void app_setup(void)
     mydata->gid = TPL_BROADCAST_ADDR;
     mydata->proto = APP_PROTO_DIS;
 #else
-    wsc_init();
+    hnt_init();
     mydata->gid = APP_DEFAULT_GID;
     mydata->proto = APP_PROTO_WSC;
     if (mydata->uid == mydata->gid) {
         /*
-         * Hack to let the wsc work as expected.
+         * Hack to let the hnt work as expected.
          * The kilobot with uid equal to DEFAULT_WSC_GID will be both the
          * first witch and the target.
          */
         mydata->nneigh = 1;
         mydata->neigh[0] = mydata->uid;
-        mydata->wsc.dist = 0;
+        mydata->hnt.dist = 0;
     }
-    mydata->wsc.target = APP_DEFAULT_GID;
-    mydata->wsc.state  = WSC_STATE_ACTIVE;
+    mydata->hnt.target = APP_DEFAULT_GID;
+    mydata->hnt.state  = WSC_STATE_ACTIVE;
 #endif
 }
 
