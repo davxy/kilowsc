@@ -24,12 +24,12 @@
 #define COLLISION_DIST          (DIST_MIN + 10)
 
 /* Time to take a U turn */
-#define UTURN_SECONDS           10
+#define UTURN_SECONDS           25
 #define UTURN_TICKS             (UTURN_SECONDS * KILO_TICKS_PER_SEC)
 
 #define RADIUS_MIN              3
-#define RADIUS_MAX              20
-#define RADIUS_STEP             1
+#define RADIUS_MAX              50
+#define RADIUS_STEP             5
 
 
 /* Current movement */
@@ -56,6 +56,17 @@
 #define MOVE_RIGHT() do { \
     myhnt->move = MOVING_RIGHT; \
     set_motors(0, kilo_turn_right); \
+} while (0)
+
+
+#define COLOR_ON() do { \
+    COLOR_APP(mydata->uid); \
+    myhnt->flags |= HNT_FLAG_COLOR_ON; \
+} while (0)
+
+#define COLOR_OFF() do { \
+    COLOR_APP(WHITE); \
+    myhnt->flags &= ~HNT_FLAG_COLOR_ON; \
 } while (0)
 
 
@@ -122,7 +133,7 @@ static int collision_avoid(uint8_t src, uint8_t match_cnt)
             mydata->tpl.dist < myhnt->min_dist) {
             if (myhnt->move == MOVING_STOP) {
                 MOVE_LEFT();
-                myhnt->move_tick = kilo_uid + UTURN_TICKS;
+                myhnt->move_tick = kilo_ticks + UTURN_TICKS;
             } else {
                 MOVE_STOP();
             }
@@ -152,7 +163,7 @@ static void update_hunter(uint8_t src, uint8_t dist, uint8_t force)
         myhnt->aging_tick = kilo_ticks + AGING_PERIOD_TICKS;
     }
 
-    approach = dist <= prev_dist;
+    approach = dist + 5 <= prev_dist;
     if (approach == 0 || dist == DIST_MAX || src == kilo_uid) {
         /* Distance has increased */
         if ((myhnt->flags & HNT_FLAG_APPROACH) != 0) {
@@ -173,6 +184,7 @@ static void update_hunter(uint8_t src, uint8_t dist, uint8_t force)
             } else {
                 MOVE_FRONT();
                 myhnt->move_tick = kilo_ticks + myhnt->radius * KILO_TICKS_PER_SEC;
+                TRACE(">>> ticks %u, radius %u\n", myhnt->move_tick, myhnt->radius);
                 myhnt->radius = ((uint16_t)myhnt->radius + RADIUS_STEP < RADIUS_MAX) ?
                                 myhnt->radius + RADIUS_STEP : RADIUS_MAX;
             }
@@ -187,15 +199,13 @@ static void update_hunter(uint8_t src, uint8_t dist, uint8_t force)
 
 }
 
+
 static void blink(void)
 {
-    if ((myhnt->flags & HNT_FLAG_COLOR_ON) != 0) {
-        COLOR_APP(WHITE);
-        myhnt->flags &= ~HNT_FLAG_COLOR_ON;
-    } else {
-        COLOR_APP(mydata->uid);
-        myhnt->flags |= HNT_FLAG_COLOR_ON;
-    }
+    if ((myhnt->flags & HNT_FLAG_COLOR_ON) != 0)
+        COLOR_OFF();
+    else
+        COLOR_ON();
 }
 
 static void active_hunter(void)
@@ -218,7 +228,7 @@ static void active_target(void)
 
     if (myhnt->move_tick > kilo_ticks)
         return;
-    myhnt->move_tick = kilo_ticks + (1 + rand() % 10) *TICKS_PER_SEC;
+    myhnt->move_tick = kilo_ticks + (5 + rand() % 10) * TICKS_PER_SEC;
 
     dir = rand() % 4;
     switch (dir) {
@@ -248,8 +258,9 @@ static void new_match(uint8_t target)
         myhnt->dist_src = target;
         myhnt->state = HNT_STATE_SLEEP;
         /* Give him some time to escape */
-        myhnt->move_tick = kilo_ticks + SLEEP_TIME_TICKS;
-        COLOR_APP(mydata->uid);
+        //myhnt->move_tick = kilo_ticks + SLEEP_TIME_TICKS;
+        MOVE_STOP();
+        COLOR_ON();
         TRACE_APP("SLEEP...\n");
     } else {
         myhnt->state = HNT_STATE_DONE;
@@ -384,6 +395,8 @@ void hnt_loop(void)
                 } else {
                     myhnt->dist = 0;
                     myhnt->dist_src = mydata->uid;
+                    MOVE_LEFT();
+                    myhnt->move_tick = kilo_ticks + 15;
                 }
                 myhnt->match_cnt = pdu.mch;
                 myhnt->target = pdu.tar;
@@ -435,6 +448,6 @@ void hnt_init(void)
     myhnt->min_dist_src = TPL_BROADCAST_ADDR;
     myhnt->target = TPL_BROADCAST_ADDR;
     mydata->tpl.timeout_cb = NULL;
-    COLOR_APP(mydata->uid);
+    COLOR_ON();
     myhnt->radius = RADIUS_MIN;
 }

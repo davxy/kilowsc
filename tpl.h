@@ -21,7 +21,7 @@
  *
  * TPDU structure:
  *
- *   [ src(1) | dst(1) | flg(1) | SDU(6) ]
+ *   [ src(1) | dst(1) | ctrl(1) | SDU(6) ]
  *
  *   SDU: service data unit (information)
  */
