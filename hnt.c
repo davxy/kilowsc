@@ -447,7 +447,6 @@ void hnt_init(void)
     myhnt->min_dist = DIST_MAX;
     myhnt->min_dist_src = TPL_BROADCAST_ADDR;
     myhnt->target = TPL_BROADCAST_ADDR;
-    mydata->tpl.timeout_cb = NULL;
     COLOR_ON();
     myhnt->radius = RADIUS_MIN;
 }

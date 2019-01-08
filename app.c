@@ -132,6 +132,21 @@ static void app_loop(void)
     }
 }
 
+static void app_timeout(addr_t dst, uint8_t *data, uint8_t siz)
+{
+    TRACE_APP("TIMEOUT waiting ACK from %u\n", dst);
+    ASSERT(siz > 0);
+
+    if (data[0] != mydata->proto) {
+        TRACE_APP("... inactive subsystem %u, current active is %u, ignore!\n",
+                  data[0], mydata->proto);
+        return;
+    }
+    /* SPT is the only protocol with a timeout handler */
+    if (mydata->proto == APP_PROTO_SPT)
+        spt_timeout(dst, data + 1, siz - 1);
+}
+
 /* Application initialization */
 static void app_setup(void)
 {
@@ -142,7 +157,7 @@ static void app_setup(void)
     memset(mydata, 0, sizeof(*mydata));
 
     /* Communication channel init */
-    tpl_init(0, NULL);
+    tpl_init(0, app_timeout);
 
     mydata->uid = kilo_uid;
 

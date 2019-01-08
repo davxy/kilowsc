@@ -255,22 +255,33 @@ static void start_protocol(void)
     myspt->notify_skp = TPL_BROADCAST_ADDR; /* nothing to skip */
 }
 
-static int is_neighbor(addr_t addr)
-{
-    uint8_t i;
 
-    for (i = 0; i < mydata->nneigh; i++) {
-        if (mydata->neigh[i] == addr)
-            break;
+void spt_timeout(addr_t dst, uint8_t *data, uint8_t siz)
+{
+    struct spt_pdu pdu;
+
+    TRACE_APP("SPT TIMEOUT\n");
+    ASSERT(siz >= 1);
+    app_neighbor_print();
+    switch (data[0]) {
+    case PDU_TYPE_ASK:
+        pdu.root = myspt->root;
+        pdu.type = PDU_TYPE_ASK; /* fake response */
+        active_state(&pdu, dst);
+        break;
+    case PDU_TYPE_FIN_REQ:
+        pdu.type = PDU_TYPE_FIN_RES; /* fake response */
+        term_state(&pdu, dst);
+        break;
+    case PDU_TYPE_CHK:
+        pdu.type = PDU_TYPE_FIN_REQ;
+        break;
+    default:
+        TRACE_APP("Unknown SPT PDU type (%u)", data[0]);
+        return;
     }
-    return (i < mydata->nneigh);
-}
-
-static void timeout(addr_t dst, uint8_t *data, uint8_t siz)
-{
-    // TODO: remove from neighbor list
-    TRACE_APP("TIMEOUT waiting ACK from %u\n", dst);
-    ASSERT(0);
+    app_neighbor_del(dst);
+    app_neighbor_print();
 }
 
 static void send_pending(void)
@@ -325,7 +336,7 @@ void spt_loop(void)
     if (pdu_recv(&pdu, &src) < 0)
         return; /* Nothing to do */
 
-    if (!is_neighbor(src)) {
+    if (!app_is_neighbor(src)) {
         TRACE_APP("Warning: SPT message from not neighbor node %u\n", src);
         /*
          * Hack: send back an ASK message with the same root.
@@ -361,6 +372,5 @@ void spt_init(void)
     COLOR_APP(WHITE);
     myspt->state = SPT_STATE_IDLE;
     myspt->parent = kilo_uid;
-    mydata->tpl.timeout_cb = timeout;
     myspt->start = kilo_ticks + SPT_RAND_START_TICKS;
 }

@@ -89,10 +89,23 @@ struct spt_ctx {
 /** Spanning tree protocol context type alias. */
 typedef struct spt_ctx spt_ctx_t;
 
-/** Spanning tree protocol initialization. */
+/**
+ * Spanning tree protocol initialization.
+ */
 void spt_init(void);
 
-/** Spanning tree protocol loop. */
+/**
+ * Spanning tree protocol loop.
+ */
 void spt_loop(void);
+
+/**
+ * Timeout handler (waiting ACK).
+ *
+ * @param dst   Destination address.
+ * @param data  Sent SPT PDU data (packed).
+ * @param siz   Sent SPT PDU data size.
+ */
+void spt_timeout(addr_t dst, uint8_t *data, uint8_t siz);
 
 #endif /* SPT_H_ */
