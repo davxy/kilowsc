@@ -12,33 +12,14 @@
 #define DIS_RAND_OFF    (rand() % (3 * KILO_TICKS_PER_SEC))
 
 
-static void neighbor_print(void)
-{
-    int i;
-
-    TRACE_APP("N(x) = { ");
-    for (i = 0; i < mydata->nneigh; i++)
-        TRACE2_APP("%u ", mydata->neigh[i]);
-    TRACE2_APP("}\n");
-}
-
 static void neighbor_add(addr_t addr)
 {
-    uint8_t i;
+    uint8_t nneigh = mydata->nneigh;
 
-    for (i = 0; i < mydata->nneigh; i++) {
-        if (mydata->neigh[i] == addr)
-            break;
-    }
-    if (i == mydata->nneigh) {
-        if (i < APP_NEIGHBORS_MAX) {
-            mydata->neigh[i] = addr;
-            mydata->nneigh++;
-            mydis->last = kilo_ticks;
-            neighbor_print();
-        } else {
-            TRACE("NEIGHBOR %u ignored, max capacity reached\n", addr);
-        }
+    app_neighbor_add(addr);
+    if (mydata->nneigh > nneigh) {
+        mydis->last = kilo_ticks;
+        app_neighbor_print();
     }
 }
 

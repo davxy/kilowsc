@@ -71,4 +71,13 @@ int app_send(addr_t addr, uint8_t *data, uint8_t size);
  */
 int app_recv(addr_t *src, uint8_t *data, uint8_t *size);
 
+
+void app_neighbor_print(void);
+
+void app_neighbor_add(addr_t addr);
+
+void app_neighbor_del(addr_t addr);
+
+int app_is_neighbor(addr_t addr);
+
 #endif /* APP_H_ */

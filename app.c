@@ -39,6 +39,59 @@ int app_recv(addr_t *src, uint8_t *data, uint8_t *size)
 }
 
 
+void app_neighbor_print(void)
+{
+    int i;
+
+    TRACE_APP("N(x) = { ");
+    for (i = 0; i < mydata->nneigh; i++)
+        TRACE2_APP("%u ", mydata->neigh[i]);
+    TRACE2_APP("}\n");
+}
+
+void app_neighbor_add(addr_t addr)
+{
+    uint8_t i;
+
+    for (i = 0; i < mydata->nneigh; i++) {
+        if (mydata->neigh[i] == addr)
+            break;
+    }
+    if (i == mydata->nneigh) {
+        if (i < APP_NEIGHBORS_MAX) {
+            mydata->neigh[i] = addr;
+            mydata->nneigh++;
+        } else {
+            TRACE("NEIGHBOR %u ignored, max capacity reached\n", addr);
+        }
+    }
+}
+
+void app_neighbor_del(addr_t addr)
+{
+    uint8_t i;
+
+    for (i = 0; i < mydata->nneigh; i++) {
+        if (mydata->neigh[i] == addr) {
+            memcpy(&mydata->neigh[i], &mydata->neigh[i+1],
+                    mydata->nneigh - i);
+            mydata->nneigh--;
+            break;
+        }
+    }
+}
+
+int app_is_neighbor(addr_t addr)
+{
+    uint8_t i;
+
+    for (i = 0; i < mydata->nneigh; i++) {
+        if (mydata->neigh[i] == addr)
+            break;
+    }
+    return (i < mydata->nneigh);
+}
+
 /* Application loop */
 static void app_loop(void)
 {
