@@ -4,7 +4,7 @@ Distributed programming with Kilobots
 The project consists in the the analysis, modeling and development of a
 System of Systems.
 
-In practice it consists in a group of Kilobots 1 robots playing
+In practice it consists in a group of Kilobots robots playing
 together a classical social game from the 80/90’s: “Witch says colors”.
 
 The game allows to explore several areas of distributed computing and SoS
