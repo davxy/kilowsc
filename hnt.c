@@ -387,7 +387,8 @@ void hnt_loop(void)
         if (myhnt->state != HNT_STATE_IDLE) {
             /* Check if a new match is started */
             if (pdu.mch == myhnt->match_cnt) {
-                update_hunter(src, dist, 0);
+                if (mydata->uid != myhnt->target)
+                    update_hunter(src, dist, 0);
             } else if (pdu.mch > myhnt->match_cnt) {
                 if (pdu.tar != mydata->uid) {
                     myhnt->dist = dist;
